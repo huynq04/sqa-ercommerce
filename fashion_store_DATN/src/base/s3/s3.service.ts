@@ -19,7 +19,7 @@ export class UploadService {
       }),
     );
 
-    const fileUrl = `http://localhost:9000/${bucket}/${key}`;
+    const fileUrl = `http://34.87.35.175:9000/${bucket}/${key}`;
     return { message: 'Upload success', fileUrl };
   }
 }
