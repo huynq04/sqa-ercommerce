@@ -7,7 +7,7 @@ export class UploadService {
   constructor(@Inject('S3_CLIENT') private readonly s3Client: S3Client) {}
 
   async uploadFile(file: Express.Multer.File) {
-    const bucket = 'datn'; // nhớ tạo bucket này trong MinIO trước
+    const bucket = 'sqa-ercommerce'; // nhớ tạo bucket này trong MinIO trước
     const key = `uploads/${randomUUID()}-${file.originalname}`;
 
     await this.s3Client.send(
