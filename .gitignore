@@ -1,0 +1,51 @@
+# macOS
+.DS_Store
+
+# Dependencies
+**/node_modules/
+
+# Build outputs
+**/dist/
+**/build/
+**/dist-ssr/
+**/coverage/
+**/.nyc_output/
+
+# Logs
+**/logs/
+**/*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Env files
+**/.env
+**/.env.*
+!**/.env.example
+
+# Runtime data
+**/pids/
+**/*.pid
+**/*.seed
+**/*.pid.lock
+**/report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# Temp files
+**/.temp/
+**/.tmp/
+**/tmp/
+
+# Editor files
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+**/.idea/
+**/*.suo
+**/*.ntvs*
+**/*.njsproj
+**/*.sln
+**/*.sw?
