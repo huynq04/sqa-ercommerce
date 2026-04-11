@@ -5,7 +5,7 @@
 // TC-FE-ADMINDASH-03: when APIs throw error, loading becomes false and cards show zero values
 
 // Mock AdminLayout used by the component to simplify rendering
-jest.mock('./AdminLayout', () => ({ default: ({ children }: any) => <div>{children}</div> }));
+jest.mock('./AdminLayout', () => ({ __esModule: true, default: ({ children }: any) => <div>{children}</div> }));
 
 // Mock API modules
 jest.mock('../../api/authApi', () => ({ getProfile: jest.fn() }));

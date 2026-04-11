@@ -4,7 +4,7 @@
 // TC-FE-ADMINREVENUE-02: applying date filters calls API with params
 // TC-FE-ADMINREVENUE-03: on API error, shows "Không có dữ liệu." message
 
-jest.mock('./AdminLayout', () => ({ default: ({ children }: any) => <div>{children}</div> }));
+jest.mock('./AdminLayout', () => ({ __esModule: true, default: ({ children }: any) => <div>{children}</div> }));
 jest.mock('../../api/admin/analyticsApi', () => ({ getRevenueStats: jest.fn(), getRevenueByMonth: jest.fn() }));
 
 import React from 'react';
@@ -28,8 +28,8 @@ describe('AdminRevenue', () => {
     await waitFor(() => expect(getRevenueStats).toHaveBeenCalled());
 
     expect(screen.getByText('Thống kê doanh thu')).toBeInTheDocument();
-    // Assert that formatted totalRevenue appears
-    expect(screen.getByText(/1,000/)).toBeInTheDocument();
+    // Assert that formatted totalRevenue appears (wait for async render)
+    await screen.findByText(/1,000/);
     // SVG chart should be rendered
     expect(container.querySelector('svg')).toBeInTheDocument();
   });

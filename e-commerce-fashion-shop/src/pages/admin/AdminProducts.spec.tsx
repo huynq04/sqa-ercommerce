@@ -7,7 +7,7 @@
 // TC-FE-ADMINPROD-05: deleting a product confirms and calls deleteProduct
 
 // Mock AdminLayout to simplify test
-jest.mock('./AdminLayout', () => ({ default: ({ children }: any) => <div>{children}</div> }));
+jest.mock('./AdminLayout', () => ({ __esModule: true, default: ({ children }: any) => <div>{children}</div> }));
 
 // Mock APIs and utilities
 jest.mock('../../api/categoriesApi', () => ({ getCategories: jest.fn() }));
@@ -16,10 +16,18 @@ jest.mock('../../api/uploadApi', () => ({ uploadFile: jest.fn() }));
 jest.mock('../../api/productsApi', () => ({ getProducts: jest.fn() }));
 jest.mock('../../utils/toast', () => ({ toast: jest.fn() }));
 
-// Mock react-router hooks
+// Mock react-router hooks (preserve other exports like `Link`)
 const mockNavigate = jest.fn();
 const mockLocation = { pathname: '/admin/products' };
-jest.mock('react-router-dom', () => ({ useNavigate: () => mockNavigate, useLocation: () => mockLocation }));
+jest.mock('react-router-dom', () => {
+  const actual = jest.requireActual('react-router-dom');
+  return {
+    __esModule: true,
+    ...actual,
+    useNavigate: () => mockNavigate,
+    useLocation: () => mockLocation,
+  };
+});
 
 import React from 'react';
 import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
@@ -52,8 +60,8 @@ describe('AdminProducts', () => {
 
     await waitFor(() => expect(getProducts).toHaveBeenCalled());
 
-    expect(screen.getByText('P1')).toBeInTheDocument();
-    expect(screen.getByText(/100/)).toBeInTheDocument();
+    await screen.findByText('P1');
+    await screen.findByText(/100/);
   });
 
   it('// TC-FE-ADMINPROD-03 should show toast error when uploading without file', async () => {

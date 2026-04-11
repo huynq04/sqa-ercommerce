@@ -100,7 +100,14 @@
     "moduleNameMapper": {
       "^@modules/(.*)$": "<rootDir>/modules/$1",
       "^@base/(.*)$": "<rootDir>/base/$1",
-      "^@config/(.*)$": "<rootDir>/config/$1"
+      "^@config/(.*)$": "<rootDir>/config/$1",
+      "^@config$": "<rootDir>/config",
+      "^@providers/(.*)$": "<rootDir>/providers/$1",
+      "^@providers$": "<rootDir>/providers"
     }
+    ,
+    "setupFiles": [
+      "<rootDir>/test/jest.setup.ts"
+    ]
   }
 }

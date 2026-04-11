@@ -4,7 +4,7 @@
 // TC-FE-ADMINORDERS-02: pagination buttons call loadData (page change)
 // TC-FE-ADMINORDERS-03: without token stays loading
 
-jest.mock('./AdminLayout', () => ({ default: ({ children }: any) => <div>{children}</div> }));
+jest.mock('./AdminLayout', () => ({ __esModule: true, default: ({ children }: any) => <div>{children}</div> }));
 jest.mock('../../api/admin/ordersApi', () => ({ getOrders: jest.fn() }));
 
 import React from 'react';
@@ -36,9 +36,9 @@ describe('AdminOrders', () => {
 
     await waitFor(() => expect(getOrders).toHaveBeenCalled());
 
-    expect(screen.getByText('User1')).toBeInTheDocument();
+    await screen.findByText('User1');
     // Status mapping for 'completed' is 'Hoàn thành'
-    expect(screen.getByText('Hoàn thành')).toBeInTheDocument();
+    await screen.findByText('Hoàn thành');
   });
 
   it('// TC-FE-ADMINORDERS-02 clicking Next increments page and triggers load', async () => {
@@ -48,7 +48,7 @@ describe('AdminOrders', () => {
     render(<AdminOrders />);
     await waitFor(() => expect(getOrders).toHaveBeenCalledTimes(1));
 
-    const nextBtn = screen.getByText('Sau');
+    const nextBtn = await screen.findByText('Sau');
     fireEvent.click(nextBtn);
 
     // Expect getOrders called again due to page change
