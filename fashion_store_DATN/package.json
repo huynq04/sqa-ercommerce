@@ -93,6 +93,16 @@
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },
+    "moduleNameMapper": {
+      "^@app\\.controller$": "<rootDir>/app.controller",
+      "^@app\\.service$": "<rootDir>/app.service",
+      "^@app\\.module$": "<rootDir>/app.module",
+      "^@config$": "<rootDir>/config",
+      "^@config/(.*)$": "<rootDir>/config/$1",
+      "^@base/(.*)$": "<rootDir>/base/$1",
+      "^@modules/(.*)$": "<rootDir>/modules/$1",
+      "^@providers/(.*)$": "<rootDir>/providers/$1"
+    },
     "collectCoverageFrom": [
       "**/*.(t|j)s"
     ],
