@@ -1,4 +1,3 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
 import {
   afterEach,
@@ -9,10 +8,18 @@ import {
   jest,
 } from '@jest/globals';
 
-import { OptionalAuthGuard } from './optional-auth.guard';
+import type { OptionalAuthGuard as OptionalAuthGuardType } from './optional-auth.guard';
+
+// Dung implementation that cua OptionalAuthGuard de tranh bi global mock trong jest.setup.ts.
+const { OptionalAuthGuard } = jest.requireActual('./optional-auth.guard') as {
+  OptionalAuthGuard: new (
+    cacheManager: any,
+    jwtService: JwtService,
+  ) => OptionalAuthGuardType;
+};
 
 describe('OptionalAuthGuard', () => {
-  let guard: OptionalAuthGuard;
+  let guard: OptionalAuthGuardType;
 
   // Mock dependency ngoai de test logic guard theo dung don vi (unit).
   const cacheManagerMock = {
@@ -43,25 +50,15 @@ describe('OptionalAuthGuard', () => {
     };
   };
 
-  beforeEach(async () => {
+  beforeEach(() => {
     // Reset lich su mock de test case doc lap voi nhau.
     jest.clearAllMocks();
 
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        OptionalAuthGuard,
-        {
-          provide: 'CACHE_MANAGER',
-          useValue: cacheManagerMock,
-        },
-        {
-          provide: JwtService,
-          useValue: jwtServiceMock,
-        },
-      ],
-    }).compile();
-
-    guard = module.get<OptionalAuthGuard>(OptionalAuthGuard);
+    // Khoi tao truc tiep de unit test bo tach khoi Nest DI/proxy.
+    guard = new OptionalAuthGuard(
+      cacheManagerMock as any,
+      jwtServiceMock as unknown as JwtService,
+    );
   });
 
   afterEach(() => {

@@ -1,5 +1,4 @@
 import { UnauthorizedException } from '@nestjs/common';
-import { Test, TestingModule } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
 import { Reflector } from '@nestjs/core';
 import {
@@ -11,11 +10,20 @@ import {
   jest,
 } from '@jest/globals';
 
-import { AuthGuard } from './auth.guard';
+import type { AuthGuard as AuthGuardType } from './auth.guard';
 import { IS_PUBLIC_KEY } from './public.decorator';
 
+// Dung implementation that cua AuthGuard de khong bi global mock trong jest.setup.ts.
+const { AuthGuard } = jest.requireActual('./auth.guard') as {
+  AuthGuard: new (
+    cacheManager: any,
+    jwtService: JwtService,
+    reflector: Reflector,
+  ) => AuthGuardType;
+};
+
 describe('AuthGuard', () => {
-  let guard: AuthGuard;
+  let guard: AuthGuardType;
 
   // Mock cac dependency ngoai de unit test chi tap trung vao logic guard.
   const cacheManagerMock = {
@@ -56,25 +64,12 @@ describe('AuthGuard', () => {
     // Lam sach lich su mock truoc moi test case.
     jest.clearAllMocks();
 
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        AuthGuard,
-        {
-          provide: 'CACHE_MANAGER',
-          useValue: cacheManagerMock,
-        },
-        {
-          provide: JwtService,
-          useValue: jwtServiceMock,
-        },
-        {
-          provide: Reflector,
-          useValue: reflectorMock,
-        },
-      ],
-    }).compile();
-
-    guard = module.get<AuthGuard>(AuthGuard);
+    // Khoi tao truc tiep de unit test bo tach khoi Nest DI/proxy.
+    guard = new AuthGuard(
+      cacheManagerMock as any,
+      jwtServiceMock as unknown as JwtService,
+      reflectorMock as unknown as Reflector,
+    );
   });
 
   afterEach(() => {
