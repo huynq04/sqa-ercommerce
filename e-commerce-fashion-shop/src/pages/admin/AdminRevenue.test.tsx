@@ -1,11 +1,7 @@
 // TC-FE-ADMINREVENUE: Unit tests for AdminRevenue
 
-// TC-FE-ADMINREVENUE-01: loads stats and monthly revenue chart when token present
-// TC-FE-ADMINREVENUE-02: applying date filters calls API with params
-// TC-FE-ADMINREVENUE-03: on API error, shows "Không có dữ liệu." message
-
-jest.mock('./AdminLayout', () => ({ __esModule: true, default: ({ children }: any) => <div>{children}</div> }));
-jest.mock('../../api/admin/analyticsApi', () => ({ getRevenueStats: jest.fn(), getRevenueByMonth: jest.fn() }));
+vi.mock('./AdminLayout', () => ({ __esModule: true, default: ({ children }: any) => <div>{children}</div> }));
+vi.mock('../../api/admin/analyticsApi', () => ({ getRevenueStats: vi.fn(), getRevenueByMonth: vi.fn() }));
 
 import React from 'react';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
@@ -14,14 +10,15 @@ import { getRevenueStats, getRevenueByMonth } from '../../api/admin/analyticsApi
 
 describe('AdminRevenue', () => {
   afterEach(() => {
-    jest.resetAllMocks();
+    vi.resetAllMocks();
     localStorage.clear();
   });
 
-  it('// TC-FE-ADMINREVENUE-01 should display stats and render SVG chart', async () => {
+  // Test Case ID: TC-FE-ADMINREVENUE-01
+  it('should display stats and render SVG chart', async () => {
     localStorage.setItem('token', 't');
-    (getRevenueStats as jest.Mock).mockResolvedValue({ totalRevenue: 1000, totalOrders: 2, averageOrderValue: 500, productsSold: 10 } as any);
-    (getRevenueByMonth as jest.Mock).mockResolvedValue([{ month: '2024-01', revenue: 100 }]);
+    (getRevenueStats as any).mockResolvedValue({ totalRevenue: 1000, totalOrders: 2, averageOrderValue: 500, productsSold: 10 } as any);
+    (getRevenueByMonth as any).mockResolvedValue([{ month: '2024-01', revenue: 100 }]);
 
     const { container } = render(<AdminRevenue />);
 
@@ -34,10 +31,11 @@ describe('AdminRevenue', () => {
     expect(container.querySelector('svg')).toBeInTheDocument();
   });
 
-  it('// TC-FE-ADMINREVENUE-02 clicking filter calls APIs with date params', async () => {
+  // Test Case ID: TC-FE-ADMINREVENUE-02
+  it('clicking filter calls APIs with date params', async () => {
     localStorage.setItem('token', 't');
-    (getRevenueStats as jest.Mock).mockResolvedValue({ totalRevenue: 0, totalOrders: 0, averageOrderValue: 0, productsSold: 0 } as any);
-    (getRevenueByMonth as jest.Mock).mockResolvedValue([] as any);
+    (getRevenueStats as any).mockResolvedValue({ totalRevenue: 0, totalOrders: 0, averageOrderValue: 0, productsSold: 0 } as any);
+    (getRevenueByMonth as any).mockResolvedValue([] as any);
 
     const { container } = render(<AdminRevenue />);
     await waitFor(() => expect(getRevenueStats).toHaveBeenCalled());
@@ -54,10 +52,11 @@ describe('AdminRevenue', () => {
     await waitFor(() => expect(getRevenueStats).toHaveBeenCalledWith('t', expect.objectContaining({ startDate: '2024-01-01', endDate: '2024-01-31' })));
   });
 
-  it('// TC-FE-ADMINREVENUE-03 shows no-data message when API fails', async () => {
+  // Test Case ID: TC-FE-ADMINREVENUE-03
+  it('shows no-data message when API fails', async () => {
     localStorage.setItem('token', 't');
-    (getRevenueStats as jest.Mock).mockRejectedValue(new Error('fail'));
-    (getRevenueByMonth as jest.Mock).mockResolvedValue([] as any);
+    (getRevenueStats as any).mockRejectedValue(new Error('fail'));
+    (getRevenueByMonth as any).mockResolvedValue([] as any);
 
     render(<AdminRevenue />);
 
