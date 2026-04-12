@@ -6,92 +6,141 @@ import { Repository } from 'typeorm';
 import { NotFoundException } from '@nestjs/common';
 
 describe('UserCategoryService', () => {
-	let service: UserCategoryService;
-	let categoryRepository: Repository<Category>;
+  let service: UserCategoryService;
+  let categoryRepository: jest.Mocked<Repository<Category>>;
 
-	beforeEach(async () => {
-		const module: TestingModule = await Test.createTestingModule({
-			providers: [
-				UserCategoryService,
-				{
-					provide: getRepositoryToken(Category),
-					useValue: {
-						findOne: jest.fn(),
-					},
-				},
-			],
-		}).compile();
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        UserCategoryService,
+        {
+          provide: getRepositoryToken(Category),
+          useValue: {
+            findOne: jest.fn(),
+          },
+        },
+      ],
+    }).compile();
 
-		service = module.get<UserCategoryService>(UserCategoryService);
-		categoryRepository = module.get<Repository<Category>>(getRepositoryToken(Category));
-	});
+    service = module.get<UserCategoryService>(UserCategoryService);
+    categoryRepository = module.get(getRepositoryToken(Category));
+  });
 
-	afterEach(() => {
-		// Reset tất cả mock sau mỗi test để không ảnh hưởng các test khác
-		jest.clearAllMocks();
-	});
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
 
-	/**
-	 * =====================================
-	 * Test findAll()
-	 * =====================================
-	 */
-	describe('findAll', () => {
-		it('TC-001: sets searchFields and calls listPaginate with relations', async () => {
-			const expectedCategories = [{ id: 1 } as Category];
+  // =========================
+  // findAll
+  // =========================
+  describe('findAll', () => {
+    it('TC-001 - should set searchFields and call listPaginate', async () => {
+      const expected = [{ id: 1 } as Category];
 
-			// Mock phương thức private listPaginate
-			jest.spyOn(service as any, 'listPaginate').mockResolvedValue(expectedCategories);
+      const listPaginateSpy = jest
+        .spyOn(service as any, 'listPaginate')
+        .mockResolvedValue(expected);
 
-			const query: any = {};
-			const result = await service.findAll(query);
+      const query: any = {};
 
-			// Verify: kết quả trả về đúng danh sách
-			expect(result).toBe(expectedCategories);
+      const result = await service.findAll(query);
 
-			// Verify: searchFields được set đúng
-			expect(query.searchFields).toEqual(['name', 'description']);
+      expect(result).toBe(expected);
+      expect(query.searchFields).toEqual(['name', 'description']);
 
-			// Verify: listPaginate được gọi với relations đầy đủ
-			expect((service as any).listPaginate).toHaveBeenCalledWith(query, {
-				relations: ['parent', 'children', 'products'],
-			});
+      expect(listPaginateSpy).toHaveBeenCalledWith(query, {
+        relations: ['parent', 'children', 'products'],
+      });
+    });
 
-			// CheckDB: với listPaginate mock → không thay đổi DB
-			// Rollback: không cần vì không có thay đổi DB thực tế
-		});
-	});
+    it('TC-002 - should override existing searchFields', async () => {
+      const listPaginateSpy = jest
+        .spyOn(service as any, 'listPaginate')
+        .mockResolvedValue([]);
 
-	/**
-	 * =====================================
-	 * Test findById()
-	 * =====================================
-	 */
-	describe('findById', () => {
-		it('TC-002: returns category when found', async () => {
-			const mockCategory = { id: 5 } as Category;
+      const query: any = {
+        searchFields: ['wrong'],
+      };
 
-			(categoryRepository.findOne as jest.Mock).mockResolvedValue(mockCategory);
+      await service.findAll(query);
 
-			const result = await service.findById(5);
+      expect(query.searchFields).toEqual(['name', 'description']);
+      expect(listPaginateSpy).toHaveBeenCalled();
+    });
 
-			// Verify: trả về đúng category
-			expect(result).toBe(mockCategory);
+    it('TC-003 - should work with empty query object', async () => {
+      const listPaginateSpy = jest
+        .spyOn(service as any, 'listPaginate')
+        .mockResolvedValue([]);
 
-			// Verify: repository được gọi đúng với relations
-			expect(categoryRepository.findOne).toHaveBeenCalledWith({
-				where: { id: 5 },
-				relations: ['parent', 'children', 'products'],
-			});
+      const result = await service.findAll({} as any);
 
-			// CheckDB: mock → không truy cập DB thực tế
-		});
+      expect(result).toEqual([]);
+      expect(listPaginateSpy).toHaveBeenCalled();
+    });
+  });
 
-		it('TC-003: throws NotFoundException when category not found', async () => {
-			(categoryRepository.findOne as jest.Mock).mockResolvedValue(undefined);
+  // =========================
+  // findById
+  // =========================
+  describe('findById', () => {
+    it('TC-004 - should return category when found', async () => {
+      const mockCategory = { id: 5 } as Category;
 
-			// Verify: ném lỗi NotFoundException
-			await expect(service.findById(99)).rejects.toThrow(NotFoundException);
-		});
-	});
+      categoryRepository.findOne.mockResolvedValue(mockCategory);
+
+      const result = await service.findById(5);
+
+      expect(result).toBe(mockCategory);
+
+      expect(categoryRepository.findOne).toHaveBeenCalledWith({
+        where: { id: 5 },
+        relations: ['parent', 'children', 'products'],
+      });
+    });
+
+    it('TC-005 - should throw NotFoundException when not found', async () => {
+      categoryRepository.findOne.mockResolvedValue(null);
+
+      await expect(service.findById(99)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('TC-006 - should call repository with correct id', async () => {
+      categoryRepository.findOne.mockResolvedValue({ id: 1 } as Category);
+
+      await service.findById(123);
+
+      expect(categoryRepository.findOne).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 123 },
+        }),
+      );
+    });
+
+    it('TC-007 - should propagate unexpected errors from repository', async () => {
+      categoryRepository.findOne.mockRejectedValue(
+        new Error('DB error'),
+      );
+
+      await expect(service.findById(1)).rejects.toThrow('DB error');
+    });
+  });
+
+  it('TC-user-category-service-008 - findAll propagates listPaginate errors', async () => {
+    // TC-user-category-service-008: should propagate listPaginate errors
+    const listPaginateSpy = jest.spyOn(service as any, 'listPaginate').mockRejectedValue(new Error('paginate fail'));
+    const query: any = {};
+    await expect(service.findAll(query)).rejects.toThrow('paginate fail');
+    expect(listPaginateSpy).toHaveBeenCalled();
+  });
+
+  it('TC-user-category-service-009 - findById called with numeric id only', async () => {
+    // TC-user-category-service-009: ensure findById calls repo with numeric id
+    categoryRepository.findOne.mockResolvedValue({ id: 7 } as Category);
+    const res = await service.findById(Number('7'));
+    expect(categoryRepository.findOne).toHaveBeenCalledWith({ where: { id: 7 }, relations: ['parent', 'children', 'products'] });
+    expect(res).toEqual({ id: 7 } as Category);
+  });
 });
