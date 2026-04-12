@@ -48,3 +48,59 @@ Output mong đợi từ agent
 
 Ghi chú
 - Khi chuyển test từ cấu trúc cũ (`test/...`) sang colocated, agent có thể tạo file mới bên cạnh file nguồn và giữ lại nội dung test đã có nếu chuyển được.
+
+Export & Reporting
+- Khi tạo test cases, xuất danh sách test case thành bảng Excel/CSV theo mẫu trong repository `.github/skills/export-excel/SKILL.md`.
+- Cột bắt buộc: `Test Case ID, File/Class, Function, Test Objective, Input, Expected Output, Actual Output, Status, CheckDB, Notes`.
+
+Target files for bulk test generation
+- The instructor requires high coverage on the following files. Agents must prioritize these (create colocated specs):
+  - src/modules/ecommerce/services/user-product.service.ts
+  - src/modules/ecommerce/controllers/user-product.controller.ts
+  - src/modules/ecommerce/services/user-category.service.ts
+  - src/modules/ecommerce/controllers/user-category.controller.ts
+  - src/modules/ecommerce/services/user-review.service.ts
+  - src/modules/ecommerce/controllers/user-review.controller.ts
+  - src/modules/ecommerce/services/recommendation.service.ts
+  - src/modules/ecommerce/controllers/user-recommendation.controller.ts
+  - src/modules/ecommerce/services/admin-product.service.ts
+  - src/modules/ecommerce/controllers/admin-product.controller.ts
+  - src/modules/ecommerce/services/admin-category.service.ts
+  - src/modules/ecommerce/controllers/admin-category.controller.ts
+
+High-coverage requirements
+- For each target file, generate a comprehensive spec that covers:
+  - Happy path(s) and typical usage
+  - Input validation and missing/invalid parameters
+  - Edge cases (empty lists, boundary values)
+  - Error paths (DB exceptions, thrown errors, external failures)
+  - Security-related edge cases (injection-like inputs, permission checks)
+  - Interaction and integration points (calls to other services or repositories) mocked explicitly
+  - For controllers: ensure proper status codes and response shapes are asserted
+
+Test-case generation conventions (strict)
+- Place spec next to source file: `src/.../file.spec.ts`.
+- Each `it` MUST start with a single-line Test Case ID comment: `TC-<file-short>-<NNN>`.
+- Use descriptive test names: `TC-<id> - <short description>`.
+- Include comments inside tests describing `Arrange`, `Act`, `Assert`, `CheckDB`, and `Rollback` (if applicable).
+- When a test touches DB state (integration tests), create/restore snapshots or transactions and clearly mark `CheckDB` and `Rollback` lines in the test comments.
+- Mock all repositories by default using `getRepositoryToken()`.
+- When a function uses QueryBuilder, provide a reusable `mockQueryBuilder` helper in the spec and reuse across tests.
+
+Test quantity guidance
+- Aim to produce at least 8-20 meaningful test cases per complex service file (e.g., product services) and 6-12 test cases per controller, depending on the number of branches and endpoints. The goal is high logical branch coverage, not arbitrary tests.
+
+Exporting test catalog
+- For each generated spec, append a CSV row to the export template (`.github/skills/export-excel/SKILL.md`) with the required columns. Include `CheckDB: YES/NO` as appropriate.
+
+Automation checklist for agents
+1. Read this SKILL.md and `.github/skills/export-excel/SKILL.md`.
+2. For each target file, open the source and identify public methods / controller routes to cover.
+3. Create a colocated spec file with imports, a `describe` block, and a set of `it` blocks following the conventions above.
+4. Add reusable mock helpers for repositories and query builders at the top of the spec.
+5. For each `it`, include Test Case ID comment and Arrange/Act/Assert/CheckDB/Rollback details.
+6. Add or append corresponding CSV rows into the export template file.
+7. Run `npx jest --listTests` to verify the new spec is discoverable (optional in automation).
+
+Notes for reviewers
+- Generated tests should be reviewed for meaningful assertions and not just existence. Tests that only assert mocks were called count less toward coverage; prefer asserting returned values and side-effects.
