@@ -8,7 +8,7 @@ import {
   IsPhoneNumber,
   Validate,
 } from 'class-validator';
-import { Role } from 'src/modules/auth/role.enum';
+import { Role } from '@modules/auth/role.enum';
 
 export class UpdateUserDto {
   @IsNotEmpty()
