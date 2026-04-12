@@ -1,29 +1,23 @@
 // TC-FE-ADMINPROD: Unit tests for AdminProducts
 
-// TC-FE-ADMINPROD-01: no token -> navigate to /login
-// TC-FE-ADMINPROD-02: loads products and categories and displays product row
-// TC-FE-ADMINPROD-03: opening modal and uploading without file shows toast error
-// TC-FE-ADMINPROD-04: submitting new product calls createProduct and shows success toast
-// TC-FE-ADMINPROD-05: deleting a product confirms and calls deleteProduct
-
 // Mock AdminLayout to simplify test
-jest.mock('./AdminLayout', () => ({ __esModule: true, default: ({ children }: any) => <div>{children}</div> }));
+vi.mock('./AdminLayout', () => ({ __esModule: true, default: ({ children }: any) => <div>{children}</div> }));
 
 // Mock APIs and utilities
-jest.mock('../../api/categoriesApi', () => ({ getCategories: jest.fn() }));
-jest.mock('../../api/admin/productsApi', () => ({ createProduct: jest.fn(), updateProduct: jest.fn(), deleteProduct: jest.fn() }));
-jest.mock('../../api/uploadApi', () => ({ uploadFile: jest.fn() }));
-jest.mock('../../api/productsApi', () => ({ getProducts: jest.fn() }));
-jest.mock('../../utils/toast', () => ({ toast: jest.fn() }));
+vi.mock('../../api/categoriesApi', () => ({ getCategories: vi.fn() }));
+vi.mock('../../api/admin/productsApi', () => ({ createProduct: vi.fn(), updateProduct: vi.fn(), deleteProduct: vi.fn() }));
+vi.mock('../../api/uploadApi', () => ({ uploadFile: vi.fn() }));
+vi.mock('../../api/productsApi', () => ({ getProducts: vi.fn() }));
+vi.mock('../../utils/toast', () => ({ toast: vi.fn() }));
 
 // Mock react-router hooks (preserve other exports like `Link`)
-const mockNavigate = jest.fn();
+const mockNavigate = vi.fn();
 const mockLocation = { pathname: '/admin/products' };
-jest.mock('react-router-dom', () => {
-  const actual = jest.requireActual('react-router-dom');
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual('react-router-dom');
   return {
     __esModule: true,
-    ...actual,
+    ...(actual as any),
     useNavigate: () => mockNavigate,
     useLocation: () => mockLocation,
   };
@@ -40,21 +34,23 @@ import { uploadFile } from '../../api/uploadApi';
 
 describe('AdminProducts', () => {
   beforeEach(() => {
-    jest.resetAllMocks();
+    vi.resetAllMocks();
     localStorage.clear();
   });
 
-  it('// TC-FE-ADMINPROD-01 should navigate to /login when no token', async () => {
+  // Test Case ID: TC-FE-ADMINPROD-01
+  it('should navigate to /login when no token', async () => {
     localStorage.removeItem('token');
     render(<AdminProducts />);
     // loadData will call navigate('/login') when token missing
     expect(mockNavigate).toHaveBeenCalledWith('/login');
   });
 
-  it('// TC-FE-ADMINPROD-02 should load and display products', async () => {
+  // Test Case ID: TC-FE-ADMINPROD-02
+  it('should load and display products and categories', async () => {
     localStorage.setItem('token', 't');
-    (getProducts as jest.Mock).mockResolvedValue({ data: [{ id: 1, name: 'P1', price: '100', discount: 0, stock: 5, mainImageUrl: '', categoryId: 1 }], total: 1 } as any);
-    (getCategories as jest.Mock).mockResolvedValue({ data: [{ id: 1, name: 'Cat1' }], total: 1 } as any);
+    (getProducts as any).mockResolvedValue({ data: [{ id: 1, name: 'P1', price: '100', discount: 0, stock: 5, mainImageUrl: '', categoryId: 1 }], total: 1 } as any);
+    (getCategories as any).mockResolvedValue({ data: [{ id: 1, name: 'Cat1' }], total: 1 } as any);
 
     render(<AdminProducts />);
 
@@ -64,10 +60,11 @@ describe('AdminProducts', () => {
     await screen.findByText(/100/);
   });
 
-  it('// TC-FE-ADMINPROD-03 should show toast error when uploading without file', async () => {
+  // Test Case ID: TC-FE-ADMINPROD-03
+  it('should show toast error when uploading without file', async () => {
     localStorage.setItem('token', 't');
-    (getProducts as jest.Mock).mockResolvedValue({ data: [], total: 0 } as any);
-    (getCategories as jest.Mock).mockResolvedValue({ data: [], total: 0 } as any);
+    (getProducts as any).mockResolvedValue({ data: [], total: 0 } as any);
+    (getCategories as any).mockResolvedValue({ data: [], total: 0 } as any);
 
     render(<AdminProducts />);
     await waitFor(() => expect(getProducts).toHaveBeenCalled());
@@ -82,11 +79,12 @@ describe('AdminProducts', () => {
     expect(uploadFile).not.toHaveBeenCalled();
   });
 
-  it('// TC-FE-ADMINPROD-04 should call createProduct on submit and show success toast', async () => {
+  // Test Case ID: TC-FE-ADMINPROD-04
+  it('should call createProduct on submit and show success toast', async () => {
     localStorage.setItem('token', 'tok');
-    (getProducts as jest.Mock).mockResolvedValue({ data: [], total: 0 } as any);
-    (getCategories as jest.Mock).mockResolvedValue({ data: [{ id: 1, name: 'Cat1' }], total: 1 } as any);
-    (createProduct as jest.Mock).mockResolvedValue({ id: 10 } as any);
+    (getProducts as any).mockResolvedValue({ data: [], total: 0 } as any);
+    (getCategories as any).mockResolvedValue({ data: [{ id: 1, name: 'Cat1' }], total: 1 } as any);
+    (createProduct as any).mockResolvedValue({ id: 10 } as any);
 
     render(<AdminProducts />);
     await waitFor(() => expect(getProducts).toHaveBeenCalled());
@@ -114,15 +112,16 @@ describe('AdminProducts', () => {
     expect(toast).toHaveBeenCalledWith('Thành công!');
   });
 
-  it('// TC-FE-ADMINPROD-05 should delete product when confirmed', async () => {
+  // Test Case ID: TC-FE-ADMINPROD-05
+  it('should delete product when confirmed and show success toast', async () => {
     localStorage.setItem('token', 't');
     const product = { id: 2, name: 'DelMe', price: '100', discount: 0, stock: 1, mainImageUrl: '', categoryId: 1 };
-    (getProducts as jest.Mock).mockResolvedValue({ data: [product], total: 1 } as any);
-    (getCategories as jest.Mock).mockResolvedValue({ data: [], total: 0 } as any);
-    (deleteProduct as jest.Mock).mockResolvedValue({ message: 'deleted' } as any);
+    (getProducts as any).mockResolvedValue({ data: [product], total: 1 } as any);
+    (getCategories as any).mockResolvedValue({ data: [], total: 0 } as any);
+    (deleteProduct as any).mockResolvedValue({ message: 'deleted' } as any);
 
     // Mock confirm to always return true
-    jest.spyOn(window, 'confirm').mockImplementation(() => true);
+    vi.spyOn(window, 'confirm').mockImplementation(() => true);
 
     render(<AdminProducts />);
     await waitFor(() => expect(getProducts).toHaveBeenCalled());
