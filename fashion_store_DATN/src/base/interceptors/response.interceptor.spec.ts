@@ -22,7 +22,7 @@ describe('ResponseInterceptor', () => {
     jest.restoreAllMocks();
   });
 
-  // Test Case ID: UT_RESPONSE_INTERCEPTOR_001
+  // Test Case ID: TC_RESPONSE_INTERCEPTOR_001
   it('bao goi du lieu tra ve theo format standard response', async () => {
     // Muc tieu: xac minh interceptor map response body sang format chuan.
     // Input: data object bat ky tu handler.
@@ -40,7 +40,7 @@ describe('ResponseInterceptor', () => {
     expect(result.data).toEqual({ id: 1, name: 'Item A' });
   });
 
-  // Test Case ID: UT_RESPONSE_INTERCEPTOR_002
+  // Test Case ID: TC_RESPONSE_INTERCEPTOR_002
   it('van bao goi du lieu null ma khong nem loi', async () => {
     // Muc tieu: dam bao interceptor hoat dong voi response null.
     // Input: handler tra ve null.
@@ -56,7 +56,7 @@ describe('ResponseInterceptor', () => {
     expect(result.data).toBeNull();
   });
 
-  // Test Case ID: UT_RESPONSE_INTERCEPTOR_003
+  // Test Case ID: TC_RESPONSE_INTERCEPTOR_003
   it('gan timestamp theo dinh dang ISO tu Date.toISOString', async () => {
     // Muc tieu: xac minh timestamp duoc sinh tu Date hien tai.
     // Input: mock Date.toISOString tra ve gia tri co dinh.
@@ -77,7 +77,7 @@ describe('ResponseInterceptor', () => {
     expect(result.timestamp).toBe(fixedIso);
   });
 
-  // Test Case ID: UT_RESPONSE_INTERCEPTOR_004
+  // Test Case ID: TC_RESPONSE_INTERCEPTOR_004
   it('khong thay doi payload goc trong truong data', async () => {
     // Muc tieu: dam bao interceptor chi wrap payload, khong mutate object goc.
     // Input: payload object.

@@ -53,7 +53,7 @@ describe('AuthController', () => {
     jest.restoreAllMocks();
   });
 
-  // Test Case ID: UT_AUTH_CTRL_001
+  // Test Case ID: TC_AUTH_CTRL_001
   it('goi authService.signIn voi email/password tu DTO', async () => {
     // Muc tieu: dam bao endpoint login truyen dung email/password xuong AuthService.
     // Input: DTO gom email va password.
@@ -73,7 +73,7 @@ describe('AuthController', () => {
     expect(result).toEqual({ access_token: 'jwt-token' });
   });
 
-  // Test Case ID: UT_AUTH_CTRL_002
+  // Test Case ID: TC_AUTH_CTRL_002
   it('goi authService.register voi register DTO', async () => {
     // Muc tieu: xac minh endpoint register pass-through DTO xuong service.
     // Input: registerDto day du thong tin.
@@ -93,7 +93,7 @@ describe('AuthController', () => {
     expect(result).toEqual({ id: 10, ...registerDto });
   });
 
-  // Test Case ID: UT_AUTH_CTRL_003
+  // Test Case ID: TC_AUTH_CTRL_003
   it('goi authService.verifyOtp voi email va otp tu DTO', async () => {
     // Muc tieu: kiem tra mapping email/otp tu body vao service verifyOtp.
     // Input: verifyOtpDto (email, otp).
@@ -112,7 +112,7 @@ describe('AuthController', () => {
     expect(result).toEqual({ message: 'Xác nhận thành công' });
   });
 
-  // Test Case ID: UT_AUTH_CTRL_004
+  // Test Case ID: TC_AUTH_CTRL_004
   it('goi authService.forgotPassword voi forgot DTO', async () => {
     // Muc tieu: dam bao endpoint forgot-password goi dung service method.
     // Input: forgotPasswordDto chi gom email.
@@ -130,7 +130,7 @@ describe('AuthController', () => {
     expect(result).toEqual({ message: 'OTP reset máº­t kháº©u Ä‘Ã£ gá»­i' });
   });
 
-  // Test Case ID: UT_AUTH_CTRL_005
+  // Test Case ID: TC_AUTH_CTRL_005
   it('goi authService.resetPassword voi reset DTO', async () => {
     // Muc tieu: dam bao endpoint reset-password truyen dung payload xuong service.
     // Input: resetPasswordDto (email, otp, newPassword).
@@ -152,7 +152,7 @@ describe('AuthController', () => {
     expect(result).toEqual({ message: 'Äá»•i máº­t kháº©u thÃ nh cÃ´ng' });
   });
 
-  // Test Case ID: UT_AUTH_CTRL_006
+  // Test Case ID: TC_AUTH_CTRL_006
   it('goi authService.refresh voi userId va refreshToken tu req.user', async () => {
     // Muc tieu: xac minh controller lay sub/refreshToken tu req.user dung quy uoc.
     // Input: request co req.user.sub va req.user.refreshToken.
@@ -168,7 +168,7 @@ describe('AuthController', () => {
     expect(result).toEqual({ accessToken: 'new-access-token' });
   });
 
-  // Test Case ID: UT_AUTH_CTRL_007
+  // Test Case ID: TC_AUTH_CTRL_007
   it('goi authService.logout voi userId tu req.user', async () => {
     // Muc tieu: dam bao logout endpoint forward dung userId da xac thuc.
     // Input: request co req.user.sub.
@@ -184,7 +184,7 @@ describe('AuthController', () => {
     expect(result).toEqual({ message: 'Logout thÃ nh cÃ´ng' });
   });
 
-  // Test Case ID: UT_AUTH_CTRL_008
+  // Test Case ID: TC_AUTH_CTRL_008
   it('tra ve req.user cho endpoint profile', () => {
     // Muc tieu: endpoint profile tra lai thong tin user da duoc guard gan vao request.
     // Input: request co truong user.
@@ -196,7 +196,7 @@ describe('AuthController', () => {
     expect(result).toEqual(mockRequest.user);
   });
 
-  // Test Case ID: UT_AUTH_CTRL_009
+  // Test Case ID: TC_AUTH_CTRL_009
   it('tra ve thong bao khi khong co user sinh nhat hom nay', async () => {
     // Muc tieu: xac minh nhanh branch khong co du lieu sinh nhat.
     // Input: usersService tra ve mang rong.
@@ -214,7 +214,7 @@ describe('AuthController', () => {
     expect(result).toBe('Không có user sinh nhật hôm nay');
   });
 
-  // Test Case ID: UT_AUTH_CTRL_010
+  // Test Case ID: TC_AUTH_CTRL_010
   it('gui email cho tung user sinh nhat va tra ve tong so da gui', async () => {
     // Muc tieu: xac minh branch co du lieu sinh nhat.
     // Input: usersService tra ve danh sach 2 user.
@@ -252,7 +252,7 @@ describe('AuthController', () => {
     expect(result).toBe('2 người dùng đã được chúc mừng sinh nhật.');
   });
 
-  // Test Case ID: UT_AUTH_CTRL_011
+  // Test Case ID: TC_AUTH_CTRL_011
   it('cron job se log va goi sendBirthdayMail', async () => {
     // Muc tieu: xac minh cron method khong bo qua logic gui mail.
     // Input: goi truc tiep sendBirthdayMailCron.

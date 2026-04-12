@@ -75,7 +75,7 @@ describe('HttpExceptionLoggerFilter', () => {
     jest.restoreAllMocks();
   });
 
-  // Test Case ID: UT_HTTP_EXCEPTION_FILTER_001
+  // Test Case ID: TC_HTTP_EXCEPTION_FILTER_001
   it('constructor tao thu muc logs neu chua ton tai', () => {
     // Muc tieu: dam bao constructor khoi tao environment log.
     // Input: fs.existsSync(logDir) = false.
@@ -89,7 +89,7 @@ describe('HttpExceptionLoggerFilter', () => {
     expect(mkdirSyncSpy).toHaveBeenCalledTimes(1);
   });
 
-  // Test Case ID: UT_HTTP_EXCEPTION_FILTER_002
+  // Test Case ID: TC_HTTP_EXCEPTION_FILTER_002
   it('constructor khong tao thu muc logs neu da ton tai', () => {
     // Muc tieu: tranh tao thu muc thua khi logs da co san.
     // Input: fs.existsSync(logDir) = true.
@@ -102,7 +102,7 @@ describe('HttpExceptionLoggerFilter', () => {
     expect(mkdirSyncSpy).not.toHaveBeenCalled();
   });
 
-  // Test Case ID: UT_HTTP_EXCEPTION_FILTER_003
+  // Test Case ID: TC_HTTP_EXCEPTION_FILTER_003
   it('catch voi HttpException tra ve status/body dung theo exception', () => {
     // Muc tieu: xac minh branch xu ly HttpException.
     // Input: BadRequestException voi message tuy chinh.
@@ -125,7 +125,7 @@ describe('HttpExceptionLoggerFilter', () => {
     expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
   });
 
-  // Test Case ID: UT_HTTP_EXCEPTION_FILTER_004
+  // Test Case ID: TC_HTTP_EXCEPTION_FILTER_004
   it('catch voi exception thuong tra ve 500 va body mac dinh', () => {
     // Muc tieu: xac minh branch xu ly loi khong phai HttpException.
     // Input: Error thong thuong.
@@ -146,7 +146,7 @@ describe('HttpExceptionLoggerFilter', () => {
     expect(appendFileSyncSpy).toHaveBeenCalledTimes(1);
   });
 
-  // Test Case ID: UT_HTTP_EXCEPTION_FILTER_005
+  // Test Case ID: TC_HTTP_EXCEPTION_FILTER_005
   it('catch voi exception thuong khong co message su dung "Internal Server Error"', () => {
     // Muc tieu: bao phu fallback message mac dinh khi exception.message rong.
     // Input: object khong co truong message.
@@ -164,7 +164,7 @@ describe('HttpExceptionLoggerFilter', () => {
     });
   });
 
-  // Test Case ID: UT_HTTP_EXCEPTION_FILTER_006
+  // Test Case ID: TC_HTTP_EXCEPTION_FILTER_006
   it('logLine ghi dung status va keyword http-exception', () => {
     // Muc tieu: xac minh noi dung log co thong tin status va marker (http-exception).
     existsSyncSpy.mockReturnValue(true);

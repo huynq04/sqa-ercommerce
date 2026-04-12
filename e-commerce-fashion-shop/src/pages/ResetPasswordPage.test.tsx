@@ -47,7 +47,7 @@ describe('ResetPasswordPage', () => {
     fireEvent.change(passwordInputs[1] as Element, { target: { value: confirmPassword } })
   }
 
-  // Test Case ID: UT_FE_RESET_PASSWORD_PAGE_001
+  // Test Case ID: TC_FE_RESET_PASSWORD_PAGE_001
   it('render day du reset password form', () => {
     // Muc tieu: dam bao trang co input email va 2 input mat khau.
     sessionStorage.setItem('otpEmail', 'user@example.com')
@@ -61,7 +61,7 @@ describe('ResetPasswordPage', () => {
     expect(document.querySelector('button[type="submit"]')).toBeTruthy()
   })
 
-  // Test Case ID: UT_FE_RESET_PASSWORD_PAGE_002
+  // Test Case ID: TC_FE_RESET_PASSWORD_PAGE_002
   it('doc email va otp tu location.state', async () => {
     // Muc tieu: bao phu nhanh khoi tao state tu navigation.
     mockedLocationState = { email: 'state@example.com', otp: '777777' }
@@ -74,7 +74,7 @@ describe('ResetPasswordPage', () => {
     })
   })
 
-  // Test Case ID: UT_FE_RESET_PASSWORD_PAGE_003
+  // Test Case ID: TC_FE_RESET_PASSWORD_PAGE_003
   it('hien thi loi khi thieu email hoac otp', async () => {
     // Muc tieu: cover validation !email || !otp.
     render(<ResetPasswordPage />)
@@ -85,7 +85,7 @@ describe('ResetPasswordPage', () => {
     expect(await screen.findByText('Thiếu email hoặc OTP. Vui lòng quay lại bước nhập mã.')).toBeTruthy()
   })
 
-  // Test Case ID: UT_FE_RESET_PASSWORD_PAGE_004
+  // Test Case ID: TC_FE_RESET_PASSWORD_PAGE_004
   it('hien thi loi khi mat khau moi duoi 5 ky tu', async () => {
     // Muc tieu: cover validation do dai mat khau.
     sessionStorage.setItem('otpEmail', 'user@example.com')
@@ -99,7 +99,7 @@ describe('ResetPasswordPage', () => {
     expect(await screen.findByText('Mật khẩu mới tối thiểu 5 ký tự.')).toBeTruthy()
   })
 
-  // Test Case ID: UT_FE_RESET_PASSWORD_PAGE_005
+  // Test Case ID: TC_FE_RESET_PASSWORD_PAGE_005
   it('hien thi loi khi xac nhan mat khau khong khop', async () => {
     // Muc tieu: cover validation mismatch.
     sessionStorage.setItem('otpEmail', 'user@example.com')
@@ -113,7 +113,7 @@ describe('ResetPasswordPage', () => {
     expect(await screen.findByText('Xác nhận mật khẩu không khớp.')).toBeTruthy()
   })
 
-  // Test Case ID: UT_FE_RESET_PASSWORD_PAGE_006
+  // Test Case ID: TC_FE_RESET_PASSWORD_PAGE_006
   it('submit thanh cong: goi API, xoa otp storage va dieu huong login', async () => {
     // Muc tieu: cover luong success trong handleSubmit.
     sessionStorage.setItem('otpEmail', 'user@example.com')
@@ -139,7 +139,7 @@ describe('ResetPasswordPage', () => {
     expect(navigateMock).toHaveBeenCalledWith('/login', { state: { resetSuccess: true } })
   })
 
-  // Test Case ID: UT_FE_RESET_PASSWORD_PAGE_007
+  // Test Case ID: TC_FE_RESET_PASSWORD_PAGE_007
   it('hien thi loi tu API khi reset password that bai', async () => {
     // Muc tieu: cover catch branch.
     sessionStorage.setItem('otpEmail', 'user@example.com')
@@ -154,7 +154,7 @@ describe('ResetPasswordPage', () => {
     expect(await screen.findByText('OTP khong hop le')).toBeTruthy()
   })
 
-  // Test Case ID: UT_FE_RESET_PASSWORD_PAGE_008
+  // Test Case ID: TC_FE_RESET_PASSWORD_PAGE_008
   it('hien thi loading text trong luc dang submit', async () => {
     // Muc tieu: cover loading=true trong qua trinh goi API.
     sessionStorage.setItem('otpEmail', 'user@example.com')

@@ -60,7 +60,7 @@ describe('RegisterPage', () => {
     })
   }
 
-  // Test Case ID: UT_FE_REGISTER_PAGE_001
+  // Test Case ID: TC_FE_REGISTER_PAGE_001
   it('render day du form register', () => {
     // Muc tieu: dam bao trang register co day du cac truong bat buoc.
     render(<RegisterPage />)
@@ -73,7 +73,7 @@ describe('RegisterPage', () => {
     expect(document.querySelector('button[type="submit"]')).toBeTruthy()
   })
 
-  // Test Case ID: UT_FE_REGISTER_PAGE_002
+  // Test Case ID: TC_FE_REGISTER_PAGE_002
   it('register thanh cong: luu otp session va navigate verify-otp', async () => {
     // Muc tieu: bao phu luong thanh cong trong handleSubmit.
     registerMock.mockResolvedValue({ id: 1 })
@@ -102,7 +102,7 @@ describe('RegisterPage', () => {
     })
   })
 
-  // Test Case ID: UT_FE_REGISTER_PAGE_003
+  // Test Case ID: TC_FE_REGISTER_PAGE_003
   it('hien thi message loi khi register that bai', async () => {
     // Muc tieu: bao phu branch catch de hien thi error.
     registerMock.mockRejectedValue(new Error('Email da ton tai'))
@@ -115,7 +115,7 @@ describe('RegisterPage', () => {
     expect(await screen.findByText('Email da ton tai')).toBeTruthy()
   })
 
-  // Test Case ID: UT_FE_REGISTER_PAGE_004
+  // Test Case ID: TC_FE_REGISTER_PAGE_004
   it('hien thi trang thai loading trong luc submit', async () => {
     // Muc tieu: bao phu loading=true khi dang submit.
     registerMock.mockImplementation(

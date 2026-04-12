@@ -76,7 +76,7 @@ describe('AuthGuard', () => {
     jest.restoreAllMocks();
   });
 
-  // Test Case ID: UT_AUTH_GUARD_001
+  // Test Case ID: TC_AUTH_GUARD_001
   it('cho phep truy cap ngay neu route duoc danh dau Public', async () => {
     // Muc tieu: khi metadata isPublic = true thi guard bo qua xac thuc token.
     reflectorMock.getAllAndOverride.mockReturnValue(true);
@@ -93,7 +93,7 @@ describe('AuthGuard', () => {
     expect(cacheManagerMock.get).not.toHaveBeenCalled();
   });
 
-  // Test Case ID: UT_AUTH_GUARD_002
+  // Test Case ID: TC_AUTH_GUARD_002
   it('nem UnauthorizedException khi khong co Authorization header', async () => {
     // Muc tieu: tu choi request khong gui token.
     reflectorMock.getAllAndOverride.mockReturnValue(false);
@@ -106,7 +106,7 @@ describe('AuthGuard', () => {
     expect(jwtServiceMock.verifyAsync).not.toHaveBeenCalled();
   });
 
-  // Test Case ID: UT_AUTH_GUARD_003
+  // Test Case ID: TC_AUTH_GUARD_003
   it('nem UnauthorizedException khi Authorization header khong dung Bearer format', async () => {
     // Input: header su dung type khac Bearer.
     reflectorMock.getAllAndOverride.mockReturnValue(false);
@@ -119,7 +119,7 @@ describe('AuthGuard', () => {
     expect(jwtServiceMock.verifyAsync).not.toHaveBeenCalled();
   });
 
-  // Test Case ID: UT_AUTH_GUARD_004
+  // Test Case ID: TC_AUTH_GUARD_004
   it('nem UnauthorizedException khi verify token that bai', async () => {
     // Muc tieu: bat loi token sai chu ky/het han.
     reflectorMock.getAllAndOverride.mockReturnValue(false);
@@ -136,7 +136,7 @@ describe('AuthGuard', () => {
     );
   });
 
-  // Test Case ID: UT_AUTH_GUARD_005
+  // Test Case ID: TC_AUTH_GUARD_005
   it('nem UnauthorizedException khi token khong con trong cache (bi thu hoi/het han)', async () => {
     // CheckDB: xac minh guard co kiem tra token trong CACHE_MANAGER theo key userToken:<sub>.
     reflectorMock.getAllAndOverride.mockReturnValue(false);
@@ -154,7 +154,7 @@ describe('AuthGuard', () => {
     expect(cacheManagerMock.get).toHaveBeenCalledWith('userToken:7');
   });
 
-  // Test Case ID: UT_AUTH_GUARD_006
+  // Test Case ID: TC_AUTH_GUARD_006
   it('nem UnauthorizedException khi token trong cache khac token request', async () => {
     // Muc tieu: phat hien token da bi thay doi/thu hoi khi so sanh voi cache.
     // Input: token request la jwt-token, token trong cache la another-token.
@@ -174,7 +174,7 @@ describe('AuthGuard', () => {
     expect(cacheManagerMock.get).toHaveBeenCalledWith('userToken:7');
   });
 
-  // Test Case ID: UT_AUTH_GUARD_007
+  // Test Case ID: TC_AUTH_GUARD_007
   it('tra ve true va gan payload vao request.user khi token hop le', async () => {
     // Muc tieu: xac minh luong xac thuc thanh cong.
     reflectorMock.getAllAndOverride.mockReturnValue(false);
@@ -191,7 +191,7 @@ describe('AuthGuard', () => {
     expect(request.user).toEqual(payload);
   });
 
-  // Test Case ID: UT_AUTH_GUARD_008
+  // Test Case ID: TC_AUTH_GUARD_008
   it('extractTokenFromHeader tra ve token khi header dung dinh dang Bearer', () => {
     // Test private method qua ep kieu any de bao phu logic tach token.
     const request = {
@@ -205,7 +205,7 @@ describe('AuthGuard', () => {
     expect(token).toBe('token-123');
   });
 
-  // Test Case ID: UT_AUTH_GUARD_009
+  // Test Case ID: TC_AUTH_GUARD_009
   it('extractTokenFromHeader tra ve undefined khi header khong hop le', () => {
     // Muc tieu: dam bao helper tach token khong chap nhan schema khac Bearer.
     // Input: authorization = "Token token-123".

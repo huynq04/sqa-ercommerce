@@ -48,7 +48,7 @@ describe('LoginPage', () => {
     cleanup()
   })
 
-  // Test Case ID: UT_FE_LOGIN_PAGE_001
+  // Test Case ID: TC_FE_LOGIN_PAGE_001
   it('renders login form with email and password inputs', () => {
     render(<LoginPage />)
 
@@ -57,7 +57,7 @@ describe('LoginPage', () => {
     expect(document.querySelector('button[type="submit"]')).toBeTruthy()
   })
 
-  // Test Case ID: UT_FE_LOGIN_PAGE_002
+  // Test Case ID: TC_FE_LOGIN_PAGE_002
   it('on success stores token, navigates home and reloads page', async () => {
     loginMock.mockResolvedValue({ access_token: 'jwt-token-123' })
 
@@ -83,7 +83,7 @@ describe('LoginPage', () => {
     expect(window.location.reload).toHaveBeenCalled()
   })
 
-  // Test Case ID: UT_FE_LOGIN_PAGE_003
+  // Test Case ID: TC_FE_LOGIN_PAGE_003
   it('for 403 unverified error navigates to verify-otp and stores otp session', async () => {
     const err = new Error('tai khoan chua xac thuc') as Error & { status?: number }
     err.status = 403
@@ -109,7 +109,7 @@ describe('LoginPage', () => {
     expect(sessionStorage.getItem('otpMode')).toBe('verify')
   })
 
-  // Test Case ID: UT_FE_LOGIN_PAGE_004
+  // Test Case ID: TC_FE_LOGIN_PAGE_004
   it('shows generic error from login failure', async () => {
     loginMock.mockRejectedValue(new Error('Invalid credentials'))
 
@@ -126,7 +126,7 @@ describe('LoginPage', () => {
     expect(await screen.findByText('Invalid credentials')).toBeTruthy()
   })
 
-  // Test Case ID: UT_FE_LOGIN_PAGE_005
+  // Test Case ID: TC_FE_LOGIN_PAGE_005
   it('navigates with replace when location.state.verified is true', async () => {
     mockedLocationState = { verified: true }
 
@@ -137,7 +137,7 @@ describe('LoginPage', () => {
     })
   })
 
-  // Test Case ID: UT_FE_LOGIN_PAGE_006
+  // Test Case ID: TC_FE_LOGIN_PAGE_006
   it('navigates with replace when location.state.resetSuccess is true', async () => {
     mockedLocationState = { resetSuccess: true }
 

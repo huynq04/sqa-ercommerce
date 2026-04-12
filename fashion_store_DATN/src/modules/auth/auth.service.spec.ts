@@ -169,7 +169,7 @@ describe('AuthService', () => {
   });
 
   describe('signIn', () => {
-    // Test Case ID: UT_AUTH_001
+    // Test Case ID: TC_AUTH_001
     it('throws UnauthorizedException when email does not exist', async () => {
       // Muc tieu: xac minh dang nhap that bai khi email khong ton tai.
       // Input: email khong co trong he thong.
@@ -186,7 +186,7 @@ describe('AuthService', () => {
       );
     });
 
-    // Test Case ID: UT_AUTH_002
+    // Test Case ID: TC_AUTH_002
     it('throws ForbiddenException when account is not verified', async () => {
       // Muc tieu: chan dang nhap voi tai khoan chua xac thuc.
       // Input: user ton tai nhung isVerified = false.
@@ -200,7 +200,7 @@ describe('AuthService', () => {
       ).rejects.toBeInstanceOf(ForbiddenException);
     });
 
-    // Test Case ID: UT_AUTH_003
+    // Test Case ID: TC_AUTH_003
     it('throws ForbiddenException when account is temporarily locked', async () => {
       // Muc tieu: chan dang nhap khi tai khoan dang bi khoa tam thoi.
       // Input: lockUntil > thoi diem hien tai.
@@ -214,7 +214,7 @@ describe('AuthService', () => {
       ).rejects.toBeInstanceOf(ForbiddenException);
     });
 
-    // Test Case ID: UT_AUTH_004
+    // Test Case ID: TC_AUTH_004
     it('increments failed count and throws UnauthorizedException when password is wrong', async () => {
       // Chuan bi du lieu
       const user = buildMockUser({ loginFailedCount: 2 });
@@ -232,7 +232,7 @@ describe('AuthService', () => {
       expect(userRepo.save).toHaveBeenCalledWith(user);
     });
 
-    // Test Case ID: UT_AUTH_005
+    // Test Case ID: TC_AUTH_005
     it('locks account after 5 failed attempts', async () => {
       // Chuan bi du lieu
       const user = buildMockUser({ loginFailedCount: 4 });
@@ -251,7 +251,7 @@ describe('AuthService', () => {
       expect(userRepo.save).toHaveBeenCalledWith(user);
     });
 
-    // Test Case ID: UT_AUTH_006
+    // Test Case ID: TC_AUTH_006
     it('returns access token and resets lock info when password is correct', async () => {
       // Chuan bi du lieu
       const user = buildMockUser({
@@ -291,7 +291,7 @@ describe('AuthService', () => {
   });
 
   describe('refresh', () => {
-    // Test Case ID: UT_AUTH_007
+    // Test Case ID: TC_AUTH_007
     it('throws UnauthorizedException when refresh token is invalid', async () => {
       // Muc tieu: tu choi refresh token khong trung token da luu.
       // Input: token client gui len khac voi token trong cache.
@@ -303,7 +303,7 @@ describe('AuthService', () => {
       );
     });
 
-    // Test Case ID: UT_AUTH_008
+    // Test Case ID: TC_AUTH_008
     it('returns new access token when refresh token is valid', async () => {
       // Muc tieu: cap access token moi khi refresh token hop le.
       // Input: refresh token hop le trong cache.
@@ -322,7 +322,7 @@ describe('AuthService', () => {
   });
 
   describe('register', () => {
-    // Test Case ID: UT_AUTH_009
+    // Test Case ID: TC_AUTH_009
     it('throws ConflictException when email or phone is missing', async () => {
       // Muc tieu: validate du lieu bat buoc cho dang ky.
       // Input: email/phone rong.
@@ -338,7 +338,7 @@ describe('AuthService', () => {
       ).rejects.toBeInstanceOf(ConflictException);
     });
 
-    // Test Case ID: UT_AUTH_010
+    // Test Case ID: TC_AUTH_010
     it('throws ConflictException when email or phone already exists', async () => {
       // Muc tieu: ngan tao tai khoan trung email hoac so dien thoai.
       // Input: repository tra ve user da ton tai.
@@ -356,7 +356,7 @@ describe('AuthService', () => {
       ).rejects.toBeInstanceOf(ConflictException);
     });
 
-    // Test Case ID: UT_AUTH_011
+    // Test Case ID: TC_AUTH_011
     it('creates user with hashed password and sends OTP', async () => {
       // Chuan bi du lieu
       userRepo.findOne.mockResolvedValue(null);
@@ -393,7 +393,7 @@ describe('AuthService', () => {
   });
 
   describe('sendOtp', () => {
-    // Test Case ID: UT_AUTH_012
+    // Test Case ID: TC_AUTH_012
     it('updates OTP fields, persists user, and sends email', async () => {
       // Chuan bi du lieu
       const user = buildMockUser();
@@ -422,7 +422,7 @@ describe('AuthService', () => {
   });
 
   describe('verifyOtp', () => {
-    // Test Case ID: UT_AUTH_013
+    // Test Case ID: TC_AUTH_013
     it('throws NotFoundException when user is not found', async () => {
       // Muc tieu: kiem tra xu ly khi email khong tim thay user.
       // Input: findOne tra ve null.
@@ -434,7 +434,7 @@ describe('AuthService', () => {
       ).rejects.toBeInstanceOf(NotFoundException);
     });
 
-    // Test Case ID: UT_AUTH_014
+    // Test Case ID: TC_AUTH_014
     it('throws BadRequestException when OTP is expired', async () => {
       // Muc tieu: tu choi OTP da het han.
       // Input: otpExpiresAt nho hon thoi diem hien tai.
@@ -450,7 +450,7 @@ describe('AuthService', () => {
       ).rejects.toBeInstanceOf(BadRequestException);
     });
 
-    // Test Case ID: UT_AUTH_015
+    // Test Case ID: TC_AUTH_015
     it('throws ForbiddenException when OTP attempts reached limit', async () => {
       // Muc tieu: khoa OTP sau so lan sai toi da.
       // Input: otpAttempts = 5.
@@ -464,7 +464,7 @@ describe('AuthService', () => {
       ).rejects.toBeInstanceOf(ForbiddenException);
     });
 
-    // Test Case ID: UT_AUTH_016
+    // Test Case ID: TC_AUTH_016
     it('increments OTP attempts and throws BadRequestException when OTP is wrong', async () => {
       // Muc tieu: tang so lan thu OTP khi nhap sai ma.
       // Input: OTP nguoi dung nhap khac otpCode hien tai.
@@ -481,7 +481,7 @@ describe('AuthService', () => {
       expect(userRepo.save).toHaveBeenCalledWith(user);
     });
 
-    // Test Case ID: UT_AUTH_017
+    // Test Case ID: TC_AUTH_017
     it('verifies account and clears OTP data when OTP is correct', async () => {
       // Chuan bi du lieu
       const user = buildMockUser({ otpCode: '123456' });
@@ -503,7 +503,7 @@ describe('AuthService', () => {
   });
 
   describe('forgotPassword', () => {
-    // Test Case ID: UT_AUTH_018
+    // Test Case ID: TC_AUTH_018
     it('throws NotFoundException when email is not found', async () => {
       // Muc tieu: khong gui OTP reset cho email khong ton tai.
       // Input: findOne theo email tra ve null.
@@ -515,7 +515,7 @@ describe('AuthService', () => {
       ).rejects.toBeInstanceOf(NotFoundException);
     });
 
-    // Test Case ID: UT_AUTH_019
+    // Test Case ID: TC_AUTH_019
     it('sends OTP and returns success message when email exists', async () => {
       // Muc tieu: gui OTP reset khi email hop le.
       // Input: user ton tai theo email.
@@ -532,7 +532,7 @@ describe('AuthService', () => {
   });
 
   describe('resetPassword', () => {
-    // Test Case ID: UT_AUTH_020
+    // Test Case ID: TC_AUTH_020
     it('verifies OTP, updates password hash, and saves user', async () => {
       // Chuan bi du lieu
       const user = buildMockUser();
@@ -560,7 +560,7 @@ describe('AuthService', () => {
   });
 
   describe('logout', () => {
-    // Test Case ID: UT_AUTH_021
+    // Test Case ID: TC_AUTH_021
     it('deletes refresh token from cache and returns success message', async () => {
       // Muc tieu: xoa refresh token trong cache khi logout.
       // Input: userId da dang nhap.

@@ -36,7 +36,7 @@ describe('ForgotPasswordPage', () => {
     cleanup()
   })
 
-  // Test Case ID: UT_FE_FORGOT_PAGE_001
+  // Test Case ID: TC_FE_FORGOT_PAGE_001
   it('render day du form forgot password', () => {
     // Muc tieu: dam bao UI co input email va nut submit.
     render(<ForgotPasswordPage />)
@@ -45,7 +45,7 @@ describe('ForgotPasswordPage', () => {
     expect(document.querySelector('button[type="submit"]')).toBeTruthy()
   })
 
-  // Test Case ID: UT_FE_FORGOT_PAGE_002
+  // Test Case ID: TC_FE_FORGOT_PAGE_002
   it('submit thanh cong: goi API, luu session va dieu huong verify-otp mode reset', async () => {
     // Muc tieu: bao phu luong success trong handleSubmit.
     forgotPasswordMock.mockResolvedValue({ message: 'OTP sent' })
@@ -68,7 +68,7 @@ describe('ForgotPasswordPage', () => {
     })
   })
 
-  // Test Case ID: UT_FE_FORGOT_PAGE_003
+  // Test Case ID: TC_FE_FORGOT_PAGE_003
   it('hien thi message loi khi gui OTP that bai', async () => {
     // Muc tieu: bao phu branch catch va hien thi error.
     forgotPasswordMock.mockRejectedValue(new Error('Email khong ton tai'))
@@ -83,7 +83,7 @@ describe('ForgotPasswordPage', () => {
     expect(await screen.findByText('Email khong ton tai')).toBeTruthy()
   })
 
-  // Test Case ID: UT_FE_FORGOT_PAGE_004
+  // Test Case ID: TC_FE_FORGOT_PAGE_004
   it('hien thi loading text trong khi dang gui OTP', async () => {
     // Muc tieu: bao phu loading=true khi submit.
     forgotPasswordMock.mockImplementation(

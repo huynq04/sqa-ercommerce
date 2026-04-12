@@ -38,7 +38,7 @@ describe('AdminUsersController', () => {
     jest.restoreAllMocks();
   });
 
-  // Test Case ID: UT_ADMIN_USER_CTRL_001
+  // Test Case ID: TC_ADMIN_USER_CTRL_001
   it('getUsers voi ADMIN su dung role filter tu query', async () => {
     // Muc tieu: ADMIN co the truyen role filter tuy y.
     const req = { user: { role: Role.ADMIN } };
@@ -62,7 +62,7 @@ describe('AdminUsersController', () => {
     expect(result).toEqual({ data: [], total: 0 });
   });
 
-  // Test Case ID: UT_ADMIN_USER_CTRL_002
+  // Test Case ID: TC_ADMIN_USER_CTRL_002
   it('getUsers voi STAFF bat buoc role filter = USER', async () => {
     // Muc tieu: STAFF chi duoc xem user thuong, khong duoc tu y role filter.
     const req = { user: { role: Role.STAFF } };
@@ -78,7 +78,7 @@ describe('AdminUsersController', () => {
     });
   });
 
-  // Test Case ID: UT_ADMIN_USER_CTRL_003
+  // Test Case ID: TC_ADMIN_USER_CTRL_003
   it('getUsers parse page/limit undefined khi query khong truyen', async () => {
     const req = { user: { role: Role.ADMIN } };
     usersServiceMock.findPaged.mockResolvedValue({ data: [], total: 0 });
@@ -99,7 +99,7 @@ describe('AdminUsersController', () => {
     });
   });
 
-  // Test Case ID: UT_ADMIN_USER_CTRL_004
+  // Test Case ID: TC_ADMIN_USER_CTRL_004
   it('createStaffUser goi usersService.createStaffUser voi body', async () => {
     const body = {
       name: 'Staff A',
@@ -121,7 +121,7 @@ describe('AdminUsersController', () => {
     expect(result).toEqual({ id: 10, ...body, role: Role.STAFF });
   });
 
-  // Test Case ID: UT_ADMIN_USER_CTRL_005
+  // Test Case ID: TC_ADMIN_USER_CTRL_005
   it('getUser voi ADMIN tra ve user bat ky', async () => {
     const req = { user: { role: Role.ADMIN } };
     const target = { id: 5, role: Role.STAFF };
@@ -133,7 +133,7 @@ describe('AdminUsersController', () => {
     expect(result).toBe(target);
   });
 
-  // Test Case ID: UT_ADMIN_USER_CTRL_006
+  // Test Case ID: TC_ADMIN_USER_CTRL_006
   it('getUser voi STAFF bi chan khi target khong phai USER', async () => {
     const req = { user: { role: Role.STAFF } };
     usersServiceMock.findById.mockResolvedValue({ id: 5, role: Role.ADMIN });
@@ -143,7 +143,7 @@ describe('AdminUsersController', () => {
     );
   });
 
-  // Test Case ID: UT_ADMIN_USER_CTRL_007
+  // Test Case ID: TC_ADMIN_USER_CTRL_007
   it('getUser voi STAFF duoc xem khi target la USER', async () => {
     const req = { user: { role: Role.STAFF } };
     const target = { id: 6, role: Role.USER };
@@ -154,7 +154,7 @@ describe('AdminUsersController', () => {
     expect(result).toBe(target);
   });
 
-  // Test Case ID: UT_ADMIN_USER_CTRL_008
+  // Test Case ID: TC_ADMIN_USER_CTRL_008
   it('updateUser voi ADMIN goi updateUser truc tiep', async () => {
     const req = { user: { role: Role.ADMIN } };
     const body = { id: 1, name: 'Updated', role: Role.STAFF };
@@ -171,7 +171,7 @@ describe('AdminUsersController', () => {
     expect(result).toEqual({ id: 1, name: 'Updated', role: Role.STAFF });
   });
 
-  // Test Case ID: UT_ADMIN_USER_CTRL_009
+  // Test Case ID: TC_ADMIN_USER_CTRL_009
   it('updateUser voi STAFF bi chan khi target khong phai USER', async () => {
     const req = { user: { role: Role.STAFF } };
     const body = { id: 9, name: 'Try Update' };
@@ -184,7 +184,7 @@ describe('AdminUsersController', () => {
     expect(usersServiceMock.updateUser).not.toHaveBeenCalled();
   });
 
-  // Test Case ID: UT_ADMIN_USER_CTRL_010
+  // Test Case ID: TC_ADMIN_USER_CTRL_010
   it('updateUser voi STAFF bi chan khi co y doi role thanh khac USER', async () => {
     const req = { user: { role: Role.STAFF } };
     const body = { id: 8, role: Role.ADMIN };
@@ -197,7 +197,7 @@ describe('AdminUsersController', () => {
     expect(usersServiceMock.updateUser).not.toHaveBeenCalled();
   });
 
-  // Test Case ID: UT_ADMIN_USER_CTRL_011
+  // Test Case ID: TC_ADMIN_USER_CTRL_011
   it('updateUser voi STAFF duoc phep khi target la USER va role update la USER hoac khong co', async () => {
     const req = { user: { role: Role.STAFF } };
     const body = { id: 7, name: 'User Updated', role: Role.USER };
@@ -216,7 +216,7 @@ describe('AdminUsersController', () => {
     expect(result).toEqual({ id: 7, name: 'User Updated', role: Role.USER });
   });
 
-  // Test Case ID: UT_ADMIN_USER_CTRL_012
+  // Test Case ID: TC_ADMIN_USER_CTRL_012
   it('deleteUser voi ADMIN goi usersService.deleteUser truc tiep', async () => {
     const req = { user: { role: Role.ADMIN } };
     usersServiceMock.deleteUser.mockResolvedValue({ message: 'deleted' });
@@ -228,7 +228,7 @@ describe('AdminUsersController', () => {
     expect(result).toEqual({ message: 'deleted' });
   });
 
-  // Test Case ID: UT_ADMIN_USER_CTRL_013
+  // Test Case ID: TC_ADMIN_USER_CTRL_013
   it('deleteUser voi STAFF bi chan khi target khong phai USER', async () => {
     const req = { user: { role: Role.STAFF } };
     usersServiceMock.findById.mockResolvedValue({ id: 4, role: Role.STAFF });
@@ -240,7 +240,7 @@ describe('AdminUsersController', () => {
     expect(usersServiceMock.deleteUser).not.toHaveBeenCalled();
   });
 
-  // Test Case ID: UT_ADMIN_USER_CTRL_014
+  // Test Case ID: TC_ADMIN_USER_CTRL_014
   it('deleteUser voi STAFF duoc phep khi target la USER', async () => {
     const req = { user: { role: Role.STAFF } };
     usersServiceMock.findById.mockResolvedValue({ id: 3, role: Role.USER });

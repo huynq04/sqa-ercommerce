@@ -35,7 +35,7 @@ describe('UsersController', () => {
     jest.restoreAllMocks();
   });
 
-  // Test Case ID: UT_USER_CONTROLLER_001
+  // Test Case ID: TC_USER_CONTROLLER_001
   it('upgradeUser goi usersService.upgradeRole voi userId va role tu body', async () => {
     // Muc tieu: dam bao endpoint /users/upgrade mapping dung tham so xuong service.
     // Input: body gom userId va role.
@@ -56,7 +56,7 @@ describe('UsersController', () => {
     expect(result).toEqual({ id: 10, role: Role.STAFF });
   });
 
-  // Test Case ID: UT_USER_CONTROLLER_002
+  // Test Case ID: TC_USER_CONTROLLER_002
   it('updateUser goi usersService.updateUser voi dung body', async () => {
     // Muc tieu: dam bao endpoint /users/update forward full DTO xuong service.
     // Input: UpdateUserDto.
@@ -81,7 +81,7 @@ describe('UsersController', () => {
     expect(result).toEqual({ ...body, passwordHash: 'hashed' });
   });
 
-  // Test Case ID: UT_USER_CONTROLLER_003
+  // Test Case ID: TC_USER_CONTROLLER_003
   it('updateMe goi usersService.updateProfile voi req.user.sub va body', async () => {
     // Muc tieu: dam bao endpoint /users/me lay dung userId tu req.user.sub.
     // Input: req co user.sub va body profile.
@@ -109,7 +109,7 @@ describe('UsersController', () => {
     expect(result).toEqual({ id: 7, ...body });
   });
 
-  // Test Case ID: UT_USER_CONTROLLER_004
+  // Test Case ID: TC_USER_CONTROLLER_004
   it('updateMe van truyen userId undefined neu req.user khong co sub', async () => {
     // Muc tieu: bao phu hanh vi hien tai cua controller khi req.user.sub bi thieu.
     // Input: req.user khong co truong sub.

@@ -67,7 +67,7 @@ describe('UploadService', () => {
     jest.restoreAllMocks();
   });
 
-  // Test Case ID: UT_S3_SERVICE_001
+  // Test Case ID: TC_S3_SERVICE_001
   it('uploadFile gui PutObjectCommand dung payload va tra ve fileUrl', async () => {
     // Muc tieu: xac minh luong upload thanh cong.
     // Input: file hop le voi originalname/buffer/mimetype.
@@ -101,7 +101,7 @@ describe('UploadService', () => {
     });
   });
 
-  // Test Case ID: UT_S3_SERVICE_002
+  // Test Case ID: TC_S3_SERVICE_002
   it('uploadFile van giu nguyen ten file goc trong key', async () => {
     // Muc tieu: bao phu quy tac tao key gom uuid + originalname.
     const file = buildMockFile({ originalname: 'ao-khoac-mua-dong.jpg' });
@@ -121,7 +121,7 @@ describe('UploadService', () => {
     );
   });
 
-  // Test Case ID: UT_S3_SERVICE_003
+  // Test Case ID: TC_S3_SERVICE_003
   it('uploadFile throw lai loi khi S3 client send that bai', async () => {
     // Muc tieu: dam bao service khong nuot loi tu S3.
     // Input: s3Client.send reject.

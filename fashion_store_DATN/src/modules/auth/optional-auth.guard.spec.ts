@@ -66,7 +66,7 @@ describe('OptionalAuthGuard', () => {
     jest.restoreAllMocks();
   });
 
-  // Test Case ID: UT_OPTIONAL_AUTH_GUARD_001
+  // Test Case ID: TC_OPTIONAL_AUTH_GUARD_001
   it('tra ve true khi request khong co token', async () => {
     // Muc tieu: guard optional phai cho phep guest di qua.
     // Input: request khong co Authorization header.
@@ -80,7 +80,7 @@ describe('OptionalAuthGuard', () => {
     expect(cacheManagerMock.get).not.toHaveBeenCalled();
   });
 
-  // Test Case ID: UT_OPTIONAL_AUTH_GUARD_002
+  // Test Case ID: TC_OPTIONAL_AUTH_GUARD_002
   it('tra ve true khi Authorization khong dung dinh dang Bearer', async () => {
     // Muc tieu: header sai schema duoc xem nhu guest.
     // Input: authorization = Basic <token>.
@@ -93,7 +93,7 @@ describe('OptionalAuthGuard', () => {
     expect(jwtServiceMock.verifyAsync).not.toHaveBeenCalled();
   });
 
-  // Test Case ID: UT_OPTIONAL_AUTH_GUARD_003
+  // Test Case ID: TC_OPTIONAL_AUTH_GUARD_003
   it('tra ve true khi verify token bi loi', async () => {
     // Muc tieu: token loi khong chan request, chi coi la guest.
     // Input: verifyAsync nem exception.
@@ -107,7 +107,7 @@ describe('OptionalAuthGuard', () => {
     expect(request.user).toBeUndefined();
   });
 
-  // Test Case ID: UT_OPTIONAL_AUTH_GUARD_004
+  // Test Case ID: TC_OPTIONAL_AUTH_GUARD_004
   it('tra ve true khi token khong ton tai trong cache', async () => {
     // Muc tieu: token khong duoc cache xac nhan se bi ha cap thanh guest.
     // Input: verifyAsync thanh cong, cacheManager.get tra undefined.
@@ -127,7 +127,7 @@ describe('OptionalAuthGuard', () => {
     expect(request.user).toBeUndefined();
   });
 
-  // Test Case ID: UT_OPTIONAL_AUTH_GUARD_005
+  // Test Case ID: TC_OPTIONAL_AUTH_GUARD_005
   it('tra ve true khi token trong cache khac token request', async () => {
     // Muc tieu: token mismatch duoc xem nhu guest.
     // Input: verifyAsync thanh cong, cachedToken != request token.
@@ -146,7 +146,7 @@ describe('OptionalAuthGuard', () => {
     expect(request.user).toBeUndefined();
   });
 
-  // Test Case ID: UT_OPTIONAL_AUTH_GUARD_006
+  // Test Case ID: TC_OPTIONAL_AUTH_GUARD_006
   it('gan request.user va tra ve true khi token hop le', async () => {
     // Muc tieu: trong optional mode, neu token hop le thi van gan user context.
     // Input: token verify thanh cong va trung token trong cache.
@@ -163,7 +163,7 @@ describe('OptionalAuthGuard', () => {
     expect(request.user).toEqual(payload);
   });
 
-  // Test Case ID: UT_OPTIONAL_AUTH_GUARD_007
+  // Test Case ID: TC_OPTIONAL_AUTH_GUARD_007
   it('extractTokenFromHeader tra ve token khi dung Bearer schema', () => {
     // Test private method qua ep kieu any de bao phu logic tach token.
     const request = {
@@ -177,7 +177,7 @@ describe('OptionalAuthGuard', () => {
     expect(token).toBe('token-123');
   });
 
-  // Test Case ID: UT_OPTIONAL_AUTH_GUARD_008
+  // Test Case ID: TC_OPTIONAL_AUTH_GUARD_008
   it('extractTokenFromHeader tra ve undefined khi schema khong hop le', () => {
     const request = {
       headers: {

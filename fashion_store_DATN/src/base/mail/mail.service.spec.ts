@@ -41,7 +41,7 @@ describe('MailService', () => {
     jest.restoreAllMocks();
   });
 
-  // Test Case ID: UT_MAIL_SERVICE_001
+  // Test Case ID: TC_MAIL_SERVICE_001
   it('sendWelcomeEmail goi sendMail voi template welcome va context name', async () => {
     // Muc tieu: xac minh ham gui mail chao mung dung template + context.
     // Input: to, name.
@@ -63,7 +63,7 @@ describe('MailService', () => {
     });
   });
 
-  // Test Case ID: UT_MAIL_SERVICE_002
+  // Test Case ID: TC_MAIL_SERVICE_002
   it('sendPlainEmail goi sendMail voi to/subject/text', async () => {
     // Muc tieu: xac minh ham gui plain text email dung payload.
     // Input: to, subject, text.
@@ -84,7 +84,7 @@ describe('MailService', () => {
     });
   });
 
-  // Test Case ID: UT_MAIL_SERVICE_003
+  // Test Case ID: TC_MAIL_SERVICE_003
   it('sendWelcomeEmail throw lai loi neu sendMail that bai', async () => {
     // Muc tieu: dam bao service khong nuot loi khi provider gui mail loi.
     // Input: sendMail nem exception.
@@ -97,7 +97,7 @@ describe('MailService', () => {
     ).rejects.toThrow('SMTP unreachable');
   });
 
-  // Test Case ID: UT_MAIL_SERVICE_004
+  // Test Case ID: TC_MAIL_SERVICE_004
   it('sendPlainEmail throw lai loi neu sendMail that bai', async () => {
     const mailError = new Error('Send failed');
     mailerServiceMock.sendMail.mockRejectedValue(mailError);

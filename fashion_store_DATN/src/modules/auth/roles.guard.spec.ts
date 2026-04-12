@@ -62,7 +62,7 @@ describe('RolesGuard', () => {
     jest.restoreAllMocks();
   });
 
-  // Test Case ID: UT_ROLES_GUARD_001
+  // Test Case ID: TC_ROLES_GUARD_001
   it('tra ve true khi route khong yeu cau roles', () => {
     // Muc tieu: neu route khong gan @Roles thi cho phep truy cap.
     // Input: requiredRoles = undefined.
@@ -79,7 +79,7 @@ describe('RolesGuard', () => {
     expect(result).toBe(true);
   });
 
-  // Test Case ID: UT_ROLES_GUARD_002
+  // Test Case ID: TC_ROLES_GUARD_002
   it('nem ForbiddenException khi route can role nhung request khong co user', () => {
     // Muc tieu: chan truy cap neu chua dang nhap ma route can role.
     // Input: requiredRoles co gia tri, request.user = undefined.
@@ -90,7 +90,7 @@ describe('RolesGuard', () => {
     expect(() => guard.canActivate(context)).toThrow(ForbiddenException);
   });
 
-  // Test Case ID: UT_ROLES_GUARD_003
+  // Test Case ID: TC_ROLES_GUARD_003
   it('nem ForbiddenException khi user khong co truong role', () => {
     // Muc tieu: dam bao user phai co thong tin role de xet quyen.
     // Input: request.user ton tai nhung role bi thieu.
@@ -101,7 +101,7 @@ describe('RolesGuard', () => {
     expect(() => guard.canActivate(context)).toThrow(ForbiddenException);
   });
 
-  // Test Case ID: UT_ROLES_GUARD_004
+  // Test Case ID: TC_ROLES_GUARD_004
   it('tra ve true khi user co role phu hop voi required roles', () => {
     // Muc tieu: cho phep truy cap khi role cua user khop role yeu cau.
     // Input: requiredRoles = [ADMIN], user.role = 'admin'.
@@ -114,7 +114,7 @@ describe('RolesGuard', () => {
     expect(result).toBe(true);
   });
 
-  // Test Case ID: UT_ROLES_GUARD_005
+  // Test Case ID: TC_ROLES_GUARD_005
   it('tra ve true khi user role dang chuoi co chua role yeu cau', () => {
     // Muc tieu: bao phu logic includes trong code hien tai.
     // Input: requiredRoles = [STAFF], user.role = 'staff,admin'.
@@ -127,7 +127,7 @@ describe('RolesGuard', () => {
     expect(result).toBe(true);
   });
 
-  // Test Case ID: UT_ROLES_GUARD_006
+  // Test Case ID: TC_ROLES_GUARD_006
   it('nem ForbiddenException khi user khong du quyen', () => {
     // Muc tieu: chan request khi user role khong nam trong required roles.
     // Input: requiredRoles = [ADMIN], user.role = 'user'.

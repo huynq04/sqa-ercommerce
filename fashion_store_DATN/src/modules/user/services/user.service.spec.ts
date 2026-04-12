@@ -116,7 +116,7 @@ describe('UsersService', () => {
     jest.restoreAllMocks();
   });
 
-  // Test Case ID: UT_USER_SERVICE_001
+  // Test Case ID: TC_USER_SERVICE_001
   it('findOneByEmail tra ve user khi tim thay theo email', async () => {
     // Muc tieu: xac minh service goi dung repository query theo email.
     const user = buildMockUser();
@@ -131,7 +131,7 @@ describe('UsersService', () => {
     expect(result).toBe(user);
   });
 
-  // Test Case ID: UT_USER_SERVICE_002
+  // Test Case ID: TC_USER_SERVICE_002
   it('findById nem NotFoundException khi khong ton tai user', async () => {
     // Muc tieu: xac minh truy van DB theo id va xu ly khong tim thay.
     userRepoMock.findOne.mockResolvedValue(null);
@@ -144,7 +144,7 @@ describe('UsersService', () => {
     expect(userRepoMock.findOne).toHaveBeenCalledWith({ where: { id: 99 } });
   });
 
-  // Test Case ID: UT_USER_SERVICE_003
+  // Test Case ID: TC_USER_SERVICE_003
   it('findById tra ve user khi tim thay', async () => {
     // Muc tieu: xac minh truy van DB theo id va tra ve user dung.
     const user = buildMockUser({ id: 10 });
@@ -157,7 +157,7 @@ describe('UsersService', () => {
     expect(result).toBe(user);
   });
 
-  // Test Case ID: UT_USER_SERVICE_004
+  // Test Case ID: TC_USER_SERVICE_004
   it('upgradeRole cap nhat role va luu lai user', async () => {
     // CheckDB: xac minh role duoc cap nhat va save duoc goi.
     const user = buildMockUser({ role: Role.USER });
@@ -172,7 +172,7 @@ describe('UsersService', () => {
     expect(result).toBe(user);
   });
 
-  // Test Case ID: UT_USER_SERVICE_005
+  // Test Case ID: TC_USER_SERVICE_005
   it('updateUser cap nhat thong tin va hash password neu co password moi', async () => {
     const user = buildMockUser();
     registerRollbackSnapshot(user);
@@ -203,7 +203,7 @@ describe('UsersService', () => {
     expect(result).toBe(user);
   });
 
-  // Test Case ID: UT_USER_SERVICE_006
+  // Test Case ID: TC_USER_SERVICE_006
   it('updateUser giu nguyen passwordHash neu khong truyen password', async () => {
     const user = buildMockUser({ passwordHash: 'old-hash' });
     registerRollbackSnapshot(user);
@@ -220,7 +220,7 @@ describe('UsersService', () => {
     expect(result).toBe(user);
   });
 
-  // Test Case ID: UT_USER_SERVICE_007
+  // Test Case ID: TC_USER_SERVICE_007
   it('createStaffUser nem ConflictException khi thieu email hoac phone', async () => {
     await expect(
       service.createStaffUser({
@@ -232,7 +232,7 @@ describe('UsersService', () => {
     ).rejects.toBeInstanceOf(ConflictException);
   });
 
-  // Test Case ID: UT_USER_SERVICE_008
+  // Test Case ID: TC_USER_SERVICE_008
   it('createStaffUser nem ConflictException khi email hoac phone da ton tai', async () => {
     userRepoMock.findOne.mockResolvedValue(buildMockUser());
 
@@ -246,7 +246,7 @@ describe('UsersService', () => {
     ).rejects.toBeInstanceOf(ConflictException);
   });
 
-  // Test Case ID: UT_USER_SERVICE_009
+  // Test Case ID: TC_USER_SERVICE_009
   it('createStaffUser tao user role STAFF, hash password va save', async () => {
     userRepoMock.findOne.mockResolvedValue(null);
     userRepoMock.create.mockImplementation((input) => input);
@@ -280,7 +280,7 @@ describe('UsersService', () => {
     expect(result).toBe(saved);
   });
 
-  // Test Case ID: UT_USER_SERVICE_010
+  // Test Case ID: TC_USER_SERVICE_010
   it('updateProfile cap nhat field cho chinh user va save', async () => {
     const user = buildMockUser();
     registerRollbackSnapshot(user);
@@ -303,7 +303,7 @@ describe('UsersService', () => {
     expect(result).toBe(user);
   });
 
-  // Test Case ID: UT_USER_SERVICE_011
+  // Test Case ID: TC_USER_SERVICE_011
   it('findAll tra ve danh sach user', async () => {
     const users = [buildMockUser({ id: 1 }), buildMockUser({ id: 2 })];
     userRepoMock.find.mockResolvedValue(users);
@@ -314,7 +314,7 @@ describe('UsersService', () => {
     expect(result).toEqual(users);
   });
 
-  // Test Case ID: UT_USER_SERVICE_012
+  // Test Case ID: TC_USER_SERVICE_012
   it('findUsersWithBirthday tao query dung month/day va tra ket qua', async () => {
     const users = [buildMockUser({ id: 8 })];
 
@@ -341,7 +341,7 @@ describe('UsersService', () => {
     expect(result).toEqual(users);
   });
 
-  // Test Case ID: UT_USER_SERVICE_013
+  // Test Case ID: TC_USER_SERVICE_013
   it('deleteUser nem NotFoundException khi user khong ton tai', async () => {
     userRepoMock.findOne.mockResolvedValue(null);
 
@@ -350,7 +350,7 @@ describe('UsersService', () => {
     );
   });
 
-  // Test Case ID: UT_USER_SERVICE_014
+  // Test Case ID: TC_USER_SERVICE_014
   it('deleteUser remove user thanh cong va tra thong diep', async () => {
     const user = buildMockUser({ id: 3 });
     userRepoMock.findOne.mockResolvedValue(user);
@@ -363,7 +363,7 @@ describe('UsersService', () => {
     expect(result).toEqual({ message: expect.any(String) });
   });
 
-  // Test Case ID: UT_USER_SERVICE_015
+  // Test Case ID: TC_USER_SERVICE_015
   it('findPaged dung default page/limit/sort khi params khong hop le', async () => {
     const pagedData = [buildMockUser({ id: 1 })];
     const queryBuilderMock = {
@@ -389,7 +389,7 @@ describe('UsersService', () => {
     expect(result).toEqual({ data: pagedData, total: 1, page: 1, limit: 10 });
   });
 
-  // Test Case ID: UT_USER_SERVICE_016
+  // Test Case ID: TC_USER_SERVICE_016
   it('findPaged ap dung role filter va multi sort hop le', async () => {
     const pagedData = [buildMockUser({ id: 2, role: Role.STAFF })];
     const queryBuilderMock = {
@@ -431,7 +431,7 @@ describe('UsersService', () => {
     expect(result).toEqual({ data: pagedData, total: 1, page: 2, limit: 5 });
   });
 
-  // Test Case ID: UT_USER_SERVICE_017
+  // Test Case ID: TC_USER_SERVICE_017
   it('findPaged bo qua sort field khong hop le va van giu orderBy hop le', async () => {
     const pagedData = [buildMockUser({ id: 4 })];
     const queryBuilderMock = {

@@ -43,7 +43,7 @@ describe('ProfilePage', () => {
     avatarUrl: null,
   }
 
-  // Test Case ID: UT_FE_PROFILE_PAGE_001
+  // Test Case ID: TC_FE_PROFILE_PAGE_001
   it('hien thi loi khi chua dang nhap (khong co token)', async () => {
     // Muc tieu: cover branch token null trong useEffect.
     render(<ProfilePage />)
@@ -52,7 +52,7 @@ describe('ProfilePage', () => {
     expect(globalThis.fetch).not.toHaveBeenCalled()
   })
 
-  // Test Case ID: UT_FE_PROFILE_PAGE_002
+  // Test Case ID: TC_FE_PROFILE_PAGE_002
   it('load profile thanh cong va hien thi thong tin co ban', async () => {
     // Muc tieu: cover branch fetch profile thanh cong.
     localStorage.setItem('token', 'jwt-token')
@@ -73,7 +73,7 @@ describe('ProfilePage', () => {
     })
   })
 
-  // Test Case ID: UT_FE_PROFILE_PAGE_003
+  // Test Case ID: TC_FE_PROFILE_PAGE_003
   it('hien thi loi khi tai profile that bai', async () => {
     // Muc tieu: cover branch res.ok = false khi fetch profile.
     localStorage.setItem('token', 'jwt-token')
@@ -87,7 +87,7 @@ describe('ProfilePage', () => {
     expect(await screen.findByText('Không thể tải thông tin hồ sơ.')).toBeTruthy()
   })
 
-  // Test Case ID: UT_FE_PROFILE_PAGE_004
+  // Test Case ID: TC_FE_PROFILE_PAGE_004
   it('vao che do sua va co the huy', async () => {
     // Muc tieu: cover startEdit va cancelEdit.
     localStorage.setItem('token', 'jwt-token')
@@ -107,7 +107,7 @@ describe('ProfilePage', () => {
     expect(await screen.findByText('Chỉnh sửa')).toBeTruthy()
   })
 
-  // Test Case ID: UT_FE_PROFILE_PAGE_005
+  // Test Case ID: TC_FE_PROFILE_PAGE_005
   it('save thanh cong: goi API update va hien thi thong bao success', async () => {
     // Muc tieu: cover handleSave success branch.
     localStorage.setItem('token', 'jwt-token')
@@ -160,7 +160,7 @@ describe('ProfilePage', () => {
     expect(await screen.findByText('Cập nhật hồ sơ thành công.')).toBeTruthy()
   })
 
-  // Test Case ID: UT_FE_PROFILE_PAGE_006
+  // Test Case ID: TC_FE_PROFILE_PAGE_006
   it('hien thi loi khi save that bai', async () => {
     // Muc tieu: cover catch branch trong handleSave.
     localStorage.setItem('token', 'jwt-token')
@@ -183,7 +183,7 @@ describe('ProfilePage', () => {
     expect(await screen.findByText('Cập nhật hồ sơ thất bại.')).toBeTruthy()
   })
 
-  // Test Case ID: UT_FE_PROFILE_PAGE_007
+  // Test Case ID: TC_FE_PROFILE_PAGE_007
   it('save voi avatar moi se goi uploadFile truoc khi update', async () => {
     // Muc tieu: cover nhanh avatar upload trong handleSave.
     localStorage.setItem('token', 'jwt-token')

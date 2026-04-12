@@ -36,7 +36,7 @@ describe('LoggingService', () => {
     jest.restoreAllMocks();
   });
 
-  // Test Case ID: UT_LOGGING_SERVICE_001
+  // Test Case ID: TC_LOGGING_SERVICE_001
   it('constructor goi configure voi cau hinh appenders/categories', () => {
     // Muc tieu: dam bao logging config duoc khoi tao ngay khi tao service.
     // Input: khoi tao instance LoggingService.
@@ -60,7 +60,7 @@ describe('LoggingService', () => {
     );
   });
 
-  // Test Case ID: UT_LOGGING_SERVICE_002
+  // Test Case ID: TC_LOGGING_SERVICE_002
   it('getLogger tra ve logger theo category truyen vao', () => {
     // Muc tieu: xac minh service wrapper goi dung getLogger(category).
     // Input: category = UserService.
@@ -73,7 +73,7 @@ describe('LoggingService', () => {
     expect(logger).toBe(loggerMock);
   });
 
-  // Test Case ID: UT_LOGGING_SERVICE_003
+  // Test Case ID: TC_LOGGING_SERVICE_003
   it('getLogger dung category mac dinh la default khi khong truyen', () => {
     // Muc tieu: dam bao behavior mac dinh cua getLogger().
     const service = new LoggingService();
@@ -84,7 +84,7 @@ describe('LoggingService', () => {
     expect(logger).toBe(loggerMock);
   });
 
-  // Test Case ID: UT_LOGGING_SERVICE_004
+  // Test Case ID: TC_LOGGING_SERVICE_004
   it('logError goi logger.error voi error.message neu co', () => {
     // Muc tieu: xac minh logError uu tien message trong object error.
     // Input: Error('DB failed').
@@ -98,7 +98,7 @@ describe('LoggingService', () => {
     expect(loggerMock.error).toHaveBeenCalledWith('DB failed');
   });
 
-  // Test Case ID: UT_LOGGING_SERVICE_005
+  // Test Case ID: TC_LOGGING_SERVICE_005
   it('logError goi logger.error voi input goc neu khong co message', () => {
     // Muc tieu: bao phu nhanh fallback khi error khong co property message.
     const service = new LoggingService();

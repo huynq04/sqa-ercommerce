@@ -91,7 +91,7 @@ describe('AccessLoggerMiddleware', () => {
     jest.restoreAllMocks();
   });
 
-  // Test Case ID: UT_ACCESS_LOGGER_001
+  // Test Case ID: TC_ACCESS_LOGGER_001
   it('constructor tao thu muc logs neu chua ton tai', () => {
     // Muc tieu: dam bao middleware tao folder log khi app start.
     existsSyncSpy.mockReturnValue(false);
@@ -103,7 +103,7 @@ describe('AccessLoggerMiddleware', () => {
     expect(mkdirSyncSpy).toHaveBeenCalledTimes(1);
   });
 
-  // Test Case ID: UT_ACCESS_LOGGER_002
+  // Test Case ID: TC_ACCESS_LOGGER_002
   it('constructor khong tao thu muc logs neu da ton tai', () => {
     // Muc tieu: tranh mkdir thua neu thu muc logs da co.
     existsSyncSpy.mockReturnValue(true);
@@ -114,7 +114,7 @@ describe('AccessLoggerMiddleware', () => {
     expect(mkdirSyncSpy).not.toHaveBeenCalled();
   });
 
-  // Test Case ID: UT_ACCESS_LOGGER_003
+  // Test Case ID: TC_ACCESS_LOGGER_003
   it('use goi next va dang ky su kien finish de ghi access log', () => {
     // Muc tieu: dam bao middleware khong chan request va co gan logger cho response.
     existsSyncSpy.mockReturnValue(true);
@@ -142,7 +142,7 @@ describe('AccessLoggerMiddleware', () => {
     expect(consoleLogSpy).toHaveBeenCalledTimes(1);
   });
 
-  // Test Case ID: UT_ACCESS_LOGGER_004
+  // Test Case ID: TC_ACCESS_LOGGER_004
   it('ghi debug log khi statusCode >= 400', () => {
     // Muc tieu: branch loi theo status code phai ghi debug log.
     existsSyncSpy.mockReturnValue(true);
@@ -163,7 +163,7 @@ describe('AccessLoggerMiddleware', () => {
     expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
   });
 
-  // Test Case ID: UT_ACCESS_LOGGER_005
+  // Test Case ID: TC_ACCESS_LOGGER_005
   it('ghi debug log khi data.success = false du status code < 400', () => {
     // Muc tieu: branch loi nghiep vu (success=false) phai ghi debug.
     existsSyncSpy.mockReturnValue(true);
@@ -182,7 +182,7 @@ describe('AccessLoggerMiddleware', () => {
     expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
   });
 
-  // Test Case ID: UT_ACCESS_LOGGER_006
+  // Test Case ID: TC_ACCESS_LOGGER_006
   it('khong ghi debug log khi body khong parse duoc JSON string', () => {
     // Muc tieu: bao phu catch parse JSON trong wrapper res.send.
     existsSyncSpy.mockReturnValue(true);
@@ -200,7 +200,7 @@ describe('AccessLoggerMiddleware', () => {
     );
   });
 
-  // Test Case ID: UT_ACCESS_LOGGER_007
+  // Test Case ID: TC_ACCESS_LOGGER_007
   it('chi ghi debug log mot lan khi res.send duoc goi nhieu lan', () => {
     // Muc tieu: bien debugLogged ngan ghi debug trung lap.
     existsSyncSpy.mockReturnValue(true);
@@ -218,7 +218,7 @@ describe('AccessLoggerMiddleware', () => {
     expect(debugLines).toHaveLength(1);
   });
 
-  // Test Case ID: UT_ACCESS_LOGGER_008
+  // Test Case ID: TC_ACCESS_LOGGER_008
   it('khong ghi debug log khi headersSent = true', () => {
     // Muc tieu: nhanh chan debug neu response da gui header.
     existsSyncSpy.mockReturnValue(true);

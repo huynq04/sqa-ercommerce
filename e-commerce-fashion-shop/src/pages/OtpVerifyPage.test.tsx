@@ -55,7 +55,7 @@ describe('OtpVerifyPage', () => {
     })
   }
 
-  // Test Case ID: UT_FE_OTP_VERIFY_PAGE_001
+  // Test Case ID: TC_FE_OTP_VERIFY_PAGE_001
   it('renders OTP UI with 6 digit inputs and confirm button disabled initially', () => {
     // Objective: Ensure basic OTP page elements are rendered.
     render(<OtpVerifyPage />)
@@ -65,7 +65,7 @@ describe('OtpVerifyPage', () => {
     expect(screen.getByRole('button', { name: 'Xác nhận OTP' }).hasAttribute('disabled')).toBe(true)
   })
 
-  // Test Case ID: UT_FE_OTP_VERIFY_PAGE_002
+  // Test Case ID: TC_FE_OTP_VERIFY_PAGE_002
   it('loads email and mode from navigation state and caches into sessionStorage', async () => {
     // Objective: Cover initialization useEffect with state payload.
     mockedLocationState = { email: 'verify@example.com', mode: 'verify' }
@@ -77,7 +77,7 @@ describe('OtpVerifyPage', () => {
     expect(sessionStorage.getItem('otpMode')).toBe('verify')
   })
 
-  // Test Case ID: UT_FE_OTP_VERIFY_PAGE_003
+  // Test Case ID: TC_FE_OTP_VERIFY_PAGE_003
   it('confirm in reset mode stores otp and navigates to reset-password', async () => {
     // Objective: Cover reset flow in handleConfirm.
     mockedLocationState = { email: 'reset@example.com', mode: 'reset' }
@@ -96,7 +96,7 @@ describe('OtpVerifyPage', () => {
     expect(sessionStorage.getItem('otpCode')).toBe('123456')
   })
 
-  // Test Case ID: UT_FE_OTP_VERIFY_PAGE_004
+  // Test Case ID: TC_FE_OTP_VERIFY_PAGE_004
   it('confirm in verify mode calls API, clears otp markers and navigates login verified=true', async () => {
     // Objective: Cover verify flow success branch.
     mockedLocationState = { email: 'user@example.com', mode: 'verify' }
@@ -119,7 +119,7 @@ describe('OtpVerifyPage', () => {
     expect(sessionStorage.getItem('otpMode')).toBeNull()
   })
 
-  // Test Case ID: UT_FE_OTP_VERIFY_PAGE_005
+  // Test Case ID: TC_FE_OTP_VERIFY_PAGE_005
   it('shows error when verify OTP API fails', async () => {
     // Objective: Cover verify flow catch branch.
     mockedLocationState = { email: 'user@example.com', mode: 'verify' }
@@ -133,7 +133,7 @@ describe('OtpVerifyPage', () => {
     expect(await screen.findByText('OTP khong hop le')).toBeTruthy()
   })
 
-  // Test Case ID: UT_FE_OTP_VERIFY_PAGE_006
+  // Test Case ID: TC_FE_OTP_VERIFY_PAGE_006
   it('shows resend wait error when timer has not reached zero', async () => {
     // Objective: Cover early return branch of handleResend when remaining > 0.
     render(<OtpVerifyPage />)
@@ -143,7 +143,7 @@ describe('OtpVerifyPage', () => {
     expect(await screen.findByText('Vui lòng đợi hết thời gian để gửi lại.')).toBeTruthy()
   })
 
-  // Test Case ID: UT_FE_OTP_VERIFY_PAGE_007
+  // Test Case ID: TC_FE_OTP_VERIFY_PAGE_007
   it('resend after cooldown calls API and toast message', async () => {
     // Objective: Cover resend success path after countdown reaches zero.
     vi.useFakeTimers()
