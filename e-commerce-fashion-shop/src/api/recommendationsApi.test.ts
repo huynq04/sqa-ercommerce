@@ -1,6 +1,9 @@
 import { getRecommendations } from './recommendationsApi';
 
-afterEach(() => jest.resetAllMocks());
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.resetAllMocks();
+});
 
 describe('recommendationsApi', () => {
   // TC-recommendations-api-001: returns empty if no token
@@ -8,10 +11,10 @@ describe('recommendationsApi', () => {
     // Arrange: localStorage returns no token
     // CheckNetwork: fetch should not be called
     Object.defineProperty(globalThis, 'localStorage', {
-      value: { getItem: jest.fn().mockReturnValue(null) },
+      value: { getItem: vi.fn().mockReturnValue(null) },
       configurable: true,
     });
-    (globalThis as any).fetch = jest.fn();
+    (globalThis as any).fetch = vi.fn();
 
     // Act: request recommendations
     const res = await getRecommendations(5);
@@ -26,10 +29,10 @@ describe('recommendationsApi', () => {
   it('TC-recommendations-api-002 - calls fetch when token present', async () => {
     // Arrange: token exists and API returns recommendation list
     // CheckNetwork: verify limit query + Authorization header
-    const storage = { getItem: jest.fn().mockReturnValue('tok') };
+    const storage = { getItem: vi.fn().mockReturnValue('tok') };
     Object.defineProperty(globalThis, 'localStorage', { value: storage, configurable: true });
     const data = [{ id: 1, name: 'P' }];
-    (globalThis as any).fetch = jest.fn().mockResolvedValue({ ok: true, json: jest.fn().mockResolvedValue(data) });
+    (globalThis as any).fetch = vi.fn().mockResolvedValue({ ok: true, json: vi.fn().mockResolvedValue(data) });
 
     // Act: request recommendations with custom limit
     const res = await getRecommendations(3);
@@ -50,10 +53,10 @@ describe('recommendationsApi', () => {
     // Arrange: token exists but backend responds with error
     // CheckNetwork: one authenticated request is attempted
     Object.defineProperty(globalThis, 'localStorage', {
-      value: { getItem: jest.fn().mockReturnValue('tok') },
+      value: { getItem: vi.fn().mockReturnValue('tok') },
       configurable: true,
     });
-    (globalThis as any).fetch = jest.fn().mockResolvedValue({ ok: false, text: async () => 'unauthorized' });
+    (globalThis as any).fetch = vi.fn().mockResolvedValue({ ok: false, text: async () => 'unauthorized' });
 
     // Act: call recommendations API
     // Assert: helper propagates backend error
@@ -66,10 +69,10 @@ describe('recommendationsApi', () => {
     // Arrange: token exists and API returns empty list
     // CheckNetwork: request URL should not include ?limit=
     Object.defineProperty(globalThis, 'localStorage', {
-      value: { getItem: jest.fn().mockReturnValue('tok') },
+      value: { getItem: vi.fn().mockReturnValue('tok') },
       configurable: true,
     });
-    (globalThis as any).fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => [] });
+    (globalThis as any).fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => [] });
 
     // Act: call helper with 0 limit
     await getRecommendations(0);
@@ -80,6 +83,6 @@ describe('recommendationsApi', () => {
       expect.stringContaining('/recommendations'),
       expect.any(Object),
     );
-    expect((fetch as jest.Mock).mock.calls[0][0]).not.toContain('?limit=');
+    expect((fetch as any).mock.calls[0][0]).not.toContain('?limit=');
   });
 });

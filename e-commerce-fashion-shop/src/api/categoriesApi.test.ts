@@ -1,6 +1,9 @@
 import { getCategories, getCategory } from './categoriesApi';
 
-afterEach(() => jest.resetAllMocks());
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.resetAllMocks();
+});
 
 describe('categoriesApi', () => {
   // TC-categories-api-001: getCategories returns parsed data
@@ -8,7 +11,7 @@ describe('categoriesApi', () => {
     // Arrange: mock categories list response
     // CheckNetwork: expect page & limit query params
     const sample = { data: [{ id: 1, name: 'C' }], total: 1, page: 1, limit: 10 };
-    (globalThis as any).fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => sample });
+    (globalThis as any).fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => sample });
 
     // Act: call list helper
     const res = await getCategories({ page: 1, limit: 10 });
@@ -23,7 +26,7 @@ describe('categoriesApi', () => {
   it('TC-categories-api-002 - getCategory throws on non-ok', async () => {
     // Arrange: mock failed detail response
     // CheckNetwork: no real network call
-    (globalThis as any).fetch = jest.fn().mockResolvedValue({ ok: false, text: async () => 'nope' });
+    (globalThis as any).fetch = vi.fn().mockResolvedValue({ ok: false, text: async () => 'nope' });
 
     // Act: call detail helper
     // Assert: throws backend message
@@ -36,7 +39,7 @@ describe('categoriesApi', () => {
     // Arrange: mock successful list response
     // CheckNetwork: assert sort query key exists
     const sample = { data: [], total: 0, page: 3, limit: 5 };
-    (globalThis as any).fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => sample });
+    (globalThis as any).fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => sample });
 
     // Act: request categories with sort
     await getCategories({ page: 3, limit: 5, sort: 'id' });
@@ -51,7 +54,7 @@ describe('categoriesApi', () => {
     // Arrange: mock category detail response
     // CheckNetwork: ensure endpoint contains category id
     const sample = { id: 9, name: 'Shoes' };
-    (globalThis as any).fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => sample });
+    (globalThis as any).fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => sample });
 
     // Act: call getCategory
     const res = await getCategory(9);
