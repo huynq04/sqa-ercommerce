@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 
 import CategoryPage from './CategoryPage';
 
-jest.mock('../components/ProductCard', () => ({
+vi.mock('../components/ProductCard', () => ({
   __esModule: true,
   default: (props: any) => <div data-testid="product-card">{props.title}</div>,
 }));
@@ -23,7 +23,7 @@ describe('CategoryPage', () => {
     // Arrange: mock category detail and root categories response
     // CheckNetwork: calls category and categories endpoints
     const category = { id: 1, name: 'Cat', products: [], parent: null, children: [] };
-    (globalThis as any).fetch = jest
+    (globalThis as any).fetch = vi
       .fn()
       .mockResolvedValueOnce({ ok: true, json: async () => category }) // category
       .mockResolvedValueOnce({ ok: true, json: async () => ({ data: [] }) }); // root list
@@ -49,7 +49,7 @@ describe('CategoryPage', () => {
       parent: null,
       children: [],
     };
-    (globalThis as any).fetch = jest
+    (globalThis as any).fetch = vi
       .fn()
       .mockResolvedValueOnce({ ok: true, json: async () => category })
       .mockResolvedValueOnce({ ok: true, json: async () => ({ data: [] }) });
@@ -68,7 +68,7 @@ describe('CategoryPage', () => {
   it('TC-category-page-003 - shows not found message after fetch error', async () => {
     // Arrange: first fetch throws to simulate loading failure
     // CheckDOM: not-found fallback should appear
-    (globalThis as any).fetch = jest.fn().mockRejectedValue(new Error('network error'));
+    (globalThis as any).fetch = vi.fn().mockRejectedValue(new Error('network error'));
 
     // Act: render category page
     render(<CategoryPage />, { wrapper: (props) => <Wrapper {...props} /> });

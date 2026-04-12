@@ -3,8 +3,8 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 
-const mockGetProductReviews = jest.fn();
-jest.mock('../api/reviewsApi', () => ({
+const mockGetProductReviews = vi.fn();
+vi.mock('../api/reviewsApi', () => ({
   getProductReviews: (...args: any[]) => mockGetProductReviews(...args),
 }));
 
@@ -20,10 +20,10 @@ const Wrapper = ({ children }: { children: ReactNode }) => (
 
 describe('ProductDetail', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockGetProductReviews.mockResolvedValue({ data: [], total: 0, page: 1, limit: 20 });
     Object.defineProperty(globalThis, 'localStorage', {
-      value: { getItem: jest.fn().mockReturnValue('tok') },
+      value: { getItem: vi.fn().mockReturnValue('tok') },
       configurable: true,
     });
   });
@@ -32,7 +32,7 @@ describe('ProductDetail', () => {
   it('TC-product-detail-001 - shows product after fetch', async () => {
     // Arrange: mock product endpoint and empty reviews
     // CheckNetwork: product detail endpoint called with route id
-    (globalThis as any).fetch = jest.fn().mockResolvedValue({
+    (globalThis as any).fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
         id: 1,
@@ -63,7 +63,7 @@ describe('ProductDetail', () => {
   it('TC-product-detail-002 - disables action buttons when stock is zero', async () => {
     // Arrange: mock product with variant stock = 0 and one selectable combination
     // CheckDOM: out-of-stock warning and disabled action buttons
-    (globalThis as any).fetch = jest.fn().mockResolvedValue({
+    (globalThis as any).fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
         id: 1,
@@ -107,7 +107,7 @@ describe('ProductDetail', () => {
   it('TC-product-detail-003 - toggles seller reply visibility in reviews', async () => {
     // Arrange: mock product and one review having seller reply
     // CheckDOM: reply content appears only after toggle click
-    (globalThis as any).fetch = jest.fn().mockResolvedValue({
+    (globalThis as any).fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
         id: 1,
