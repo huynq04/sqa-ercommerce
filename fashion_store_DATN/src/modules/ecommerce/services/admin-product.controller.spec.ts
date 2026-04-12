@@ -12,8 +12,8 @@ describe('AdminProductController', () => {
 
   afterEach(() => jest.clearAllMocks());
 
-  it('TC-admin-product-controller-001 - create forwards dto to service', async () => {
-    // TC-admin-product-controller-001: create forwards dto to service
+  it('TC-ADMIN-PRODUCT-CONTROLLER-001 - create forwards dto to service', async () => {
+    // TC-ADMIN-PRODUCT-CONTROLLER-001: create forwards dto to service
     // Arrange: setup mock data / input
     // CheckDB: mocked - no DB touch
     // Act: call function
@@ -29,8 +29,8 @@ describe('AdminProductController', () => {
     expect(res).toEqual({ id: 1 });
   });
 
-  it('TC-admin-product-controller-002 - delete calls service and returns message', async () => {
-    // TC-admin-product-controller-002: delete calls service and returns message
+  it('TC-ADMIN-PRODUCT-CONTROLLER-002 - delete calls service and returns message', async () => {
+    // TC-ADMIN-PRODUCT-CONTROLLER-002: delete calls service and returns message
     // Arrange: setup mock data / input
     // CheckDB: mocked - no DB touch
     // Act: call function
@@ -45,8 +45,8 @@ describe('AdminProductController', () => {
     expect(res).toEqual({ message: 'Đã xóa sản phẩm thành công' });
   });
 
-  it('TC-admin-product-controller-003 - update forwards dto to service', async () => {
-    // TC-admin-product-controller-003: update forwards to service
+  it('TC-ADMIN-PRODUCT-CONTROLLER-003 - update forwards dto to service', async () => {
+    // TC-ADMIN-PRODUCT-CONTROLLER-003: update forwards to service
     const dto = { id: 7, name: 'updated' } as any;
     mockService.update.mockResolvedValue({ id: 7, name: 'updated' });
 
@@ -56,14 +56,14 @@ describe('AdminProductController', () => {
     expect(res).toEqual({ id: 7, name: 'updated' });
   });
 
-  it('TC-admin-product-controller-004 - update propagates service errors', async () => {
-    // TC-admin-product-controller-004: update should propagate errors from service
+  it('TC-ADMIN-PRODUCT-CONTROLLER-004 - update propagates service errors', async () => {
+    // TC-ADMIN-PRODUCT-CONTROLLER-004: update should propagate errors from service
     mockService.update.mockRejectedValue(new Error('update fail'));
     await expect(controller.update({ id: 8, name: 'x' } as any)).rejects.toThrow('update fail');
   });
 
-  // TC-admin-product-controller-005: create propagates service errors
-  it('TC-admin-product-controller-005 - create propagates service errors', async () => {
+  // TC-ADMIN-PRODUCT-CONTROLLER-005: create propagates service errors
+  it('TC-ADMIN-PRODUCT-CONTROLLER-005 - create propagates service errors', async () => {
     // Arrange: mock create failure
     // CheckDB: mocked - no DB touch
     // Act: call create
@@ -74,8 +74,8 @@ describe('AdminProductController', () => {
     await expect(controller.create({ name: 'bad' } as any)).rejects.toThrow('create fail');
   });
 
-  // TC-admin-product-controller-006: delete propagates service errors
-  it('TC-admin-product-controller-006 - delete propagates service errors', async () => {
+  // TC-ADMIN-PRODUCT-CONTROLLER-006: delete propagates service errors
+  it('TC-ADMIN-PRODUCT-CONTROLLER-006 - delete propagates service errors', async () => {
     // Arrange: mock delete failure
     // CheckDB: mocked - no DB touch
     // Act: call delete
