@@ -67,118 +67,178 @@ describe('OptionalAuthGuard', () => {
   });
 
   // Test Case ID: TC_OPTIONAL_AUTH_GUARD_001
-  it('tra ve true khi request khong co token', async () => {
-    // Muc tieu: guard optional phai cho phep guest di qua.
-    // Input: request khong co Authorization header.
-    // Ky vong: canActivate tra ve true, khong goi verify token.
-    const { context } = createExecutionContext(undefined);
+  it('[TC_OPTIONAL_001] cho phép truy cập khi không có Authorization header (guest access)', async () => {
+    const { context, request } = createExecutionContext(undefined);
 
     const result = await guard.canActivate(context);
 
+    // Core expectation
     expect(result).toBe(true);
+
+    // Ensure no authentication flow triggered
     expect(jwtServiceMock.verifyAsync).not.toHaveBeenCalled();
     expect(cacheManagerMock.get).not.toHaveBeenCalled();
+
+    // Ensure request is not mutated
+    expect(request.user).toBeUndefined();
   });
 
   // Test Case ID: TC_OPTIONAL_AUTH_GUARD_002
-  it('tra ve true khi Authorization khong dung dinh dang Bearer', async () => {
-    // Muc tieu: header sai schema duoc xem nhu guest.
-    // Input: authorization = Basic <token>.
-    // Ky vong: canActivate tra true va bo qua verifyAsync.
-    const { context } = createExecutionContext('Basic token-abc');
+  it('[TC_OPTIONAL_002] cho phép truy cập khi Authorization không đúng định dạng Bearer (coi như guest)', async () => {
+    const { context, request } = createExecutionContext('Basic token-abc');
 
     const result = await guard.canActivate(context);
 
+    // Core expectation
     expect(result).toBe(true);
+
     expect(jwtServiceMock.verifyAsync).not.toHaveBeenCalled();
+    expect(cacheManagerMock.get).not.toHaveBeenCalled();
+
+    // Ensure request is not mutated
+    expect(request.user).toBeUndefined();
   });
 
   // Test Case ID: TC_OPTIONAL_AUTH_GUARD_003
-  it('tra ve true khi verify token bi loi', async () => {
-    // Muc tieu: token loi khong chan request, chi coi la guest.
-    // Input: verifyAsync nem exception.
-    // Ky vong: canActivate tra true, request.user khong duoc gan.
+  it('[TC_OPTIONAL_003] cho phép truy cập khi verify token thất bại (coi như guest)', async () => {
     const { context, request } = createExecutionContext('Bearer bad-token');
+
     jwtServiceMock.verifyAsync.mockRejectedValue(new Error('invalid token'));
 
     const result = await guard.canActivate(context);
 
     expect(result).toBe(true);
+
+    // Verify authentication attempt happened
+    expect(jwtServiceMock.verifyAsync).toHaveBeenCalledTimes(1);
+    expect(jwtServiceMock.verifyAsync).toHaveBeenCalledWith(
+      'bad-token',
+      expect.any(Object),
+    );
+
+    expect(cacheManagerMock.get).not.toHaveBeenCalled();
+
+    // Ensure request is not mutated
     expect(request.user).toBeUndefined();
   });
 
   // Test Case ID: TC_OPTIONAL_AUTH_GUARD_004
-  it('tra ve true khi token khong ton tai trong cache', async () => {
-    // Muc tieu: token khong duoc cache xac nhan se bi ha cap thanh guest.
-    // Input: verifyAsync thanh cong, cacheManager.get tra undefined.
-    // Ky vong: canActivate true, request.user khong co.
+  it('[TC_OPTIONAL_004] cho phép truy cập khi token không tồn tại trong cache (coi như guest)', async () => {
     const { context, request } = createExecutionContext('Bearer jwt-token');
-    jwtServiceMock.verifyAsync.mockResolvedValue({
+
+    const payload = {
       sub: 5,
       email: 'u@example.com',
-    });
+    };
+
+    // verify thành công → lấy được payload
+    jwtServiceMock.verifyAsync.mockResolvedValue(payload);
+
+    // cache không có token → token không hợp lệ về mặt session
     cacheManagerMock.get.mockResolvedValue(undefined);
 
     const result = await guard.canActivate(context);
 
-    // CheckDB/Cache: xac minh guard co doi chieu key userToken:<sub>.
-    expect(cacheManagerMock.get).toHaveBeenCalledWith('userToken:5');
+    expect(jwtServiceMock.verifyAsync).toHaveBeenCalledTimes(1);
+    expect(jwtServiceMock.verifyAsync).toHaveBeenCalledWith(
+      'jwt-token',
+      expect.any(Object),
+    );
+
+    // CheckDB/Cache: có kiểm tra token trong cache theo userId
+    expect(cacheManagerMock.get).toHaveBeenCalledTimes(1);
+    expect(cacheManagerMock.get).toHaveBeenCalledWith(
+      `userToken:${payload.sub}`,
+    );
+
+    // Kết quả: không chặn request nhưng cũng không attach user
     expect(result).toBe(true);
     expect(request.user).toBeUndefined();
   });
 
   // Test Case ID: TC_OPTIONAL_AUTH_GUARD_005
-  it('tra ve true khi token trong cache khac token request', async () => {
-    // Muc tieu: token mismatch duoc xem nhu guest.
-    // Input: verifyAsync thanh cong, cachedToken != request token.
-    // Ky vong: canActivate true, request.user khong duoc gan.
+  it('[TC_OPTIONAL_005] cho phép truy cập khi token trong cache khác token request (coi như guest)', async () => {
     const { context, request } = createExecutionContext('Bearer jwt-token');
-    jwtServiceMock.verifyAsync.mockResolvedValue({
+
+    const payload = {
       sub: 5,
       email: 'u@example.com',
-    });
+    };
+
+    // verify JWT thành công
+    jwtServiceMock.verifyAsync.mockResolvedValue(payload);
+
     cacheManagerMock.get.mockResolvedValue('another-token');
 
     const result = await guard.canActivate(context);
 
-    expect(cacheManagerMock.get).toHaveBeenCalledWith('userToken:5');
+    expect(jwtServiceMock.verifyAsync).toHaveBeenCalledTimes(1);
+    expect(jwtServiceMock.verifyAsync).toHaveBeenCalledWith(
+      'jwt-token',
+      expect.any(Object),
+    );
+
+    // CheckDB/Cache: có kiểm tra token trong cache theo userId
+    expect(cacheManagerMock.get).toHaveBeenCalledTimes(1);
+    expect(cacheManagerMock.get).toHaveBeenCalledWith(
+      `userToken:${payload.sub}`,
+    );
+
+    // Kết quả: không chặn request nhưng không attach user
     expect(result).toBe(true);
     expect(request.user).toBeUndefined();
   });
 
   // Test Case ID: TC_OPTIONAL_AUTH_GUARD_006
-  it('gan request.user va tra ve true khi token hop le', async () => {
-    // Muc tieu: trong optional mode, neu token hop le thi van gan user context.
-    // Input: token verify thanh cong va trung token trong cache.
-    // Ky vong: canActivate true va request.user = payload.
+  it('[TC_OPTIONAL_006] gán request.user và cho phép truy cập khi token hợp lệ', async () => {
     const { context, request } = createExecutionContext('Bearer jwt-token');
-    const payload = { sub: 9, email: 'ok@example.com', role: 'user' };
+
+    const payload = {
+      sub: 9,
+      email: 'ok@example.com',
+      role: 'user',
+    };
+
+    // verify JWT thành công
     jwtServiceMock.verifyAsync.mockResolvedValue(payload);
+
+    // cache chứa đúng token → session hợp lệ
     cacheManagerMock.get.mockResolvedValue('jwt-token');
 
     const result = await guard.canActivate(context);
 
-    expect(cacheManagerMock.get).toHaveBeenCalledWith('userToken:9');
+    expect(jwtServiceMock.verifyAsync).toHaveBeenCalledTimes(1);
+    expect(jwtServiceMock.verifyAsync).toHaveBeenCalledWith(
+      'jwt-token',
+      expect.any(Object),
+    );
+
+    expect(cacheManagerMock.get).toHaveBeenCalledTimes(1);
+    expect(cacheManagerMock.get).toHaveBeenCalledWith(
+      `userToken:${payload.sub}`,
+    );
+
     expect(result).toBe(true);
     expect(request.user).toEqual(payload);
   });
 
   // Test Case ID: TC_OPTIONAL_AUTH_GUARD_007
-  it('extractTokenFromHeader tra ve token khi dung Bearer schema', () => {
-    // Test private method qua ep kieu any de bao phu logic tach token.
+  it('[TC_OPTIONAL_007] extractTokenFromHeader trả về token khi header đúng định dạng Bearer', () => {
     const request = {
       headers: {
         authorization: 'Bearer token-123',
       },
     } as any;
 
+    // gọi hàm private thông qua ép kiểu any
     const token = (guard as any).extractTokenFromHeader(request);
 
+    // token được tách chính xác
     expect(token).toBe('token-123');
   });
 
   // Test Case ID: TC_OPTIONAL_AUTH_GUARD_008
-  it('extractTokenFromHeader tra ve undefined khi schema khong hop le', () => {
+  it('[TC_OPTIONAL_008] extractTokenFromHeader trả về undefined khi Authorization không đúng schema Bearer', () => {
     const request = {
       headers: {
         authorization: 'Token token-123',
