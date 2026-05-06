@@ -1,17 +1,13 @@
 // TC-FE-ADMINDASH: Unit tests for AdminDashboard
 
-// TC-FE-ADMINDASH-01: with token and admin role, shows revenue card and other stats
-// TC-FE-ADMINDASH-02: without token, remains in loading state
-// TC-FE-ADMINDASH-03: when APIs throw error, loading becomes false and cards show zero values
-
 // Mock AdminLayout used by the component to simplify rendering
-jest.mock('./AdminLayout', () => ({ __esModule: true, default: ({ children }: any) => <div>{children}</div> }));
+vi.mock('./AdminLayout', () => ({ __esModule: true, default: ({ children }: any) => <div>{children}</div> }));
 
 // Mock API modules
-jest.mock('../../api/authApi', () => ({ getProfile: jest.fn() }));
-jest.mock('../../api/productsApi', () => ({ getProducts: jest.fn() }));
-jest.mock('../../api/admin/ordersApi', () => ({ getOrders: jest.fn() }));
-jest.mock('../../api/admin/usersApi', () => ({ getUsers: jest.fn() }));
+vi.mock('../../api/authApi', () => ({ getProfile: vi.fn() }));
+vi.mock('../../api/productsApi', () => ({ getProducts: vi.fn() }));
+vi.mock('../../api/admin/ordersApi', () => ({ getOrders: vi.fn() }));
+vi.mock('../../api/admin/usersApi', () => ({ getUsers: vi.fn() }));
 
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
@@ -23,17 +19,18 @@ import { getUsers } from '../../api/admin/usersApi';
 
 describe('AdminDashboard', () => {
   afterEach(() => {
-    jest.resetAllMocks();
+    vi.resetAllMocks();
     localStorage.clear();
   });
 
-  it('// TC-FE-ADMINDASH-01 shows revenue card for admin and formatted revenue', async () => {
+  // Test Case ID: TC-FE-ADMINDASH-01
+  it('shows revenue card for admin and formatted revenue', async () => {
     // Arrange: set token and mock API responses
     localStorage.setItem('token', 'tok');
-    (getProfile as jest.Mock).mockResolvedValue({ role: 'admin' });
-    (getProducts as jest.Mock).mockResolvedValue({ total: 5 } as any);
-    (getOrders as jest.Mock).mockResolvedValue({ data: [{ totalAmount: '1000' }], total: 1 } as any);
-    (getUsers as jest.Mock).mockResolvedValue({ total: 2 } as any);
+    (getProfile as any).mockResolvedValue({ role: 'admin' });
+    (getProducts as any).mockResolvedValue({ total: 5 } as any);
+    (getOrders as any).mockResolvedValue({ data: [{ totalAmount: '1000' }], total: 1 } as any);
+    (getUsers as any).mockResolvedValue({ total: 2 } as any);
 
     // Act
     render(<AdminDashboard />);
@@ -53,7 +50,8 @@ describe('AdminDashboard', () => {
     expect(screen.getByText('Người dùng')).toBeInTheDocument();
   });
 
-  it('// TC-FE-ADMINDASH-02 without token stays loading', async () => {
+  // Test Case ID: TC-FE-ADMINDASH-02
+  it('without token stays loading', async () => {
     // No token in localStorage
     localStorage.removeItem('token');
     render(<AdminDashboard />);
@@ -61,12 +59,13 @@ describe('AdminDashboard', () => {
     expect(screen.getByText('Đang tải...')).toBeInTheDocument();
   });
 
-  it('// TC-FE-ADMINDASH-03 on API error, loading false and cards show zeros', async () => {
+  // Test Case ID: TC-FE-ADMINDASH-03
+  it('on API error, loading false and cards show zeros', async () => {
     localStorage.setItem('token', 'tok');
-    (getProfile as jest.Mock).mockResolvedValue({ role: 'admin' });
-    (getProducts as jest.Mock).mockRejectedValue(new Error('fail'));
-    (getOrders as jest.Mock).mockResolvedValue({ data: [], total: 0 } as any);
-    (getUsers as jest.Mock).mockResolvedValue({ total: 0 } as any);
+    (getProfile as any).mockResolvedValue({ role: 'admin' });
+    (getProducts as any).mockRejectedValue(new Error('fail'));
+    (getOrders as any).mockResolvedValue({ data: [], total: 0 } as any);
+    (getUsers as any).mockResolvedValue({ total: 0 } as any);
 
     render(<AdminDashboard />);
 

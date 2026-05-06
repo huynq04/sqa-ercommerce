@@ -2,25 +2,25 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
-jest.mock('../components/ProductCard', () => ({
+vi.mock('../components/ProductCard', () => ({
   __esModule: true,
   default: (props: any) => <div data-testid="product-card">{props.title}</div>,
 }));
 
 // Mock Banner which imports static assets to avoid module resolution errors
-jest.mock('../components/Banner', () => ({
+vi.mock('../components/Banner', () => ({
   __esModule: true,
   default: () => <div data-testid="banner" />,
 }));
 
 // Mock Carousel which imports images
-jest.mock('../components/Carousel', () => ({
+vi.mock('../components/Carousel', () => ({
   __esModule: true,
   default: () => <div data-testid="carousel" />,
 }));
 
-const mockGetRecommendations = jest.fn();
-jest.mock('../api/recommendationsApi', () => ({
+const mockGetRecommendations = vi.fn();
+vi.mock('../api/recommendationsApi', () => ({
   getRecommendations: (...args: any[]) => mockGetRecommendations(...args),
 }));
 
@@ -31,10 +31,10 @@ const Wrapper = ({ children }: { children: ReactNode }) => (
 );
 
 beforeEach(() => {
-  jest.clearAllMocks();
+  vi.clearAllMocks();
   mockGetRecommendations.mockResolvedValue([]);
   Object.defineProperty(globalThis, 'localStorage', {
-    value: { getItem: jest.fn().mockReturnValue(null) },
+    value: { getItem: vi.fn().mockReturnValue(null) },
     configurable: true,
   });
 });
@@ -45,7 +45,7 @@ describe('Home page', () => {
     // Arrange: mock featured products endpoint and no personalized products
     // CheckNetwork: fetch is used for featured list only
     const mockProducts = { data: Array.from({ length: 8 }).map((_, i) => ({ id: i + 1, name: `P${i + 1}`, price: 100 })) };
-    (globalThis as any).fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => mockProducts });
+    (globalThis as any).fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => mockProducts });
 
     // Act: render Home page
     render(<Home />, { wrapper: Wrapper });
@@ -61,7 +61,7 @@ describe('Home page', () => {
     // Arrange: featured endpoint returns one product and localStorage has no token
     // CheckDOM: recommendation heading should stay hidden
     const mockProducts = { data: [{ id: 1, name: 'A', price: '100', discount: '0.00' }] };
-    (globalThis as any).fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => mockProducts });
+    (globalThis as any).fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => mockProducts });
 
     // Act: render Home page
     render(<Home />, { wrapper: Wrapper });
@@ -77,12 +77,12 @@ describe('Home page', () => {
   it('TC-home-003 - shows recommendation error when API fails', async () => {
     // Arrange: user has token, recommendation API fails, featured still loads
     // CheckDOM: recommendation section should show error text
-    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     Object.defineProperty(globalThis, 'localStorage', {
-      value: { getItem: jest.fn().mockReturnValue('token') },
+      value: { getItem: vi.fn().mockReturnValue('token') },
       configurable: true,
     });
-    (globalThis as any).fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ data: [] }) });
+    (globalThis as any).fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ data: [] }) });
     mockGetRecommendations.mockRejectedValueOnce(new Error('network down'));
 
     // Act: render Home page

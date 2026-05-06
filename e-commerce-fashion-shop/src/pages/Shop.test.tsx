@@ -2,7 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
-jest.mock('../components/ProductCard', () => ({
+vi.mock('../components/ProductCard', () => ({
   __esModule: true,
   default: (props: any) => <div data-testid="product-card">{props.title}</div>,
 }));
@@ -19,7 +19,7 @@ describe('Shop page', () => {
     // Arrange: mock list endpoint response with one product
     // CheckNetwork: fetch is called with default pagination query
     const mockProducts = { data: [{ id: 1, name: 'A', price: 10 }], total: 1 };
-    (globalThis as any).fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => mockProducts });
+    (globalThis as any).fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => mockProducts });
 
     // Act: render shop page
     render(<Shop />, { wrapper: Wrapper });
@@ -37,7 +37,7 @@ describe('Shop page', () => {
     // Arrange: use route containing q query and mock empty result
     // CheckNetwork: verify encoded q appears in request URL
     const mockProducts = { data: [], total: 0 };
-    (globalThis as any).fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => mockProducts });
+    (globalThis as any).fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => mockProducts });
 
     // Act: render with search keyword
     render(
@@ -49,7 +49,7 @@ describe('Shop page', () => {
     // Assert: request contains encoded q and result count text is shown
     // Rollback: jest clears mocks between tests
     await waitFor(() => expect(screen.getByText(/Hiển thị 0 \/ 0 kết quả/)).toBeInTheDocument());
-    const calledUrl = (fetch as jest.Mock).mock.calls[0][0] as string;
+    const calledUrl = (fetch as any).mock.calls[0][0] as string;
     expect(calledUrl).toContain('&q=');
     expect(calledUrl).toContain(encodeURIComponent('áo nam'));
   });
@@ -59,7 +59,7 @@ describe('Shop page', () => {
     // Arrange: mock total larger than one page
     // CheckDOM: pagination controls should be visible
     const mockProducts = { data: [{ id: 1, name: 'A', price: 10 }], total: 16 };
-    (globalThis as any).fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => mockProducts });
+    (globalThis as any).fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => mockProducts });
 
     // Act: render shop page
     render(<Shop />, { wrapper: Wrapper });
