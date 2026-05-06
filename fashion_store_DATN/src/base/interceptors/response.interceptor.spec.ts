@@ -23,13 +23,13 @@ describe('ResponseInterceptor', () => {
   });
 
   // Test Case ID: TC_RESPONSE_INTERCEPTOR_001
-  it('bao goi du lieu tra ve theo format standard response', async () => {
-    // Muc tieu: xac minh interceptor map response body sang format chuan.
-    // Input: data object bat ky tu handler.
-    // Ky vong: success=true, message=Success, co timestamp, data giu nguyen.
+  it('[TC_RESPONSE_INTERCEPTOR_001] ResponseInterceptor phải wrap dữ liệu trả về theo standard response format', async () => {
     const context = {} as ExecutionContext;
+
+    const inputData = { id: 1, name: 'Item A' };
+
     const next: CallHandler = {
-      handle: () => of({ id: 1, name: 'Item A' }),
+      handle: () => of(inputData),
     };
 
     const result = await firstValueFrom(interceptor.intercept(context, next));
@@ -37,15 +37,14 @@ describe('ResponseInterceptor', () => {
     expect(result.success).toBe(true);
     expect(result.message).toBe('Success');
     expect(result.timestamp).toEqual(expect.any(String));
-    expect(result.data).toEqual({ id: 1, name: 'Item A' });
+    expect(new Date(result.timestamp).getTime()).not.toBeNaN();
+    expect(result.data).toEqual(inputData);
   });
 
   // Test Case ID: TC_RESPONSE_INTERCEPTOR_002
-  it('van bao goi du lieu null ma khong nem loi', async () => {
-    // Muc tieu: dam bao interceptor hoat dong voi response null.
-    // Input: handler tra ve null.
-    // Ky vong: data trong response bang null.
+  it('[TC_RESPONSE_INTERCEPTOR_002] ResponseInterceptor xử lý đúng trường hợp data null mà không gây lỗi', async () => {
     const context = {} as ExecutionContext;
+
     const next: CallHandler = {
       handle: () => of(null),
     };
@@ -53,44 +52,60 @@ describe('ResponseInterceptor', () => {
     const result = await firstValueFrom(interceptor.intercept(context, next));
 
     expect(result.success).toBe(true);
+    expect(result.message).toBe('Success');
+    expect(result.timestamp).toEqual(expect.any(String));
+    expect(new Date(result.timestamp).getTime()).not.toBeNaN();
+
     expect(result.data).toBeNull();
   });
 
   // Test Case ID: TC_RESPONSE_INTERCEPTOR_003
-  it('gan timestamp theo dinh dang ISO tu Date.toISOString', async () => {
-    // Muc tieu: xac minh timestamp duoc sinh tu Date hien tai.
-    // Input: mock Date.toISOString tra ve gia tri co dinh.
-    // Ky vong: timestamp trong response trung gia tri mock.
+  it('[TC_RESPONSE_INTERCEPTOR_003] ResponseInterceptor tạo timestamp theo Date.toISOString()', async () => {
     const fixedIso = '2026-04-10T10:00:00.000Z';
+
     const toISOStringSpy = jest
       .spyOn(Date.prototype, 'toISOString')
       .mockReturnValue(fixedIso);
 
     const context = {} as ExecutionContext;
+
+    const inputData = { ok: true };
+
     const next: CallHandler = {
-      handle: () => of({ ok: true }),
+      handle: () => of(inputData),
     };
 
     const result = await firstValueFrom(interceptor.intercept(context, next));
 
     expect(toISOStringSpy).toHaveBeenCalledTimes(1);
+
+    expect(result.success).toBe(true);
+    expect(result.message).toBe('Success');
     expect(result.timestamp).toBe(fixedIso);
+    expect(result.data).toEqual(inputData);
+
+    toISOStringSpy.mockRestore();
   });
 
   // Test Case ID: TC_RESPONSE_INTERCEPTOR_004
-  it('khong thay doi payload goc trong truong data', async () => {
-    // Muc tieu: dam bao interceptor chi wrap payload, khong mutate object goc.
-    // Input: payload object.
-    // Ky vong: result.data tham chieu den dung object goc.
+  it('[TC_RESPONSE_INTERCEPTOR_004] ResponseInterceptor không mutate payload gốc khi wrap vào response', async () => {
     const payload = { code: 'A01', price: 120000 };
+
     const context = {} as ExecutionContext;
+
     const next: CallHandler = {
       handle: () => of(payload),
     };
 
     const result = await firstValueFrom(interceptor.intercept(context, next));
 
+    expect(result.success).toBe(true);
+    expect(result.message).toBe('Success');
+    expect(result.timestamp).toEqual(expect.any(String));
+    expect(new Date(result.timestamp).getTime()).not.toBeNaN();
+
+    // CheckDB/State integrity (gian tiếp): đảm bảo không clone/mutate sai object
     expect(result.data).toBe(payload);
-    expect(result.data).toEqual({ code: 'A01', price: 120000 });
+    expect(result.data).toEqual(payload);
   });
 });

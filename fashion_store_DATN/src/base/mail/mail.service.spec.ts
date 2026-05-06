@@ -42,68 +42,92 @@ describe('MailService', () => {
   });
 
   // Test Case ID: TC_MAIL_SERVICE_001
-  it('sendWelcomeEmail goi sendMail voi template welcome va context name', async () => {
-    // Muc tieu: xac minh ham gui mail chao mung dung template + context.
-    // Input: to, name.
-    // Ky vong: sendMail duoc goi voi to/subject/template/context dung gia tri.
+  it('[TC_MAIL_SERVICE_001] sendWelcomeEmail gọi MailerService.sendMail đúng template và context name', async () => {
+    const to = 'user@example.com';
+    const name = 'Nguyen Van A';
+
     mailerServiceMock.sendMail.mockResolvedValue(undefined);
 
-    await service.sendWelcomeEmail('user@example.com', 'Nguyen Van A');
+    await service.sendWelcomeEmail(to, name);
 
-    // CheckDB/ExternalCall: xac minh payload gui sang mail provider dung.
-    expect(mailerServiceMock.sendMail).toHaveBeenCalledTimes(1);
-    expect(mailerServiceMock.sendMail).toHaveBeenCalledWith({
-      to: 'user@example.com',
-      subject:
-        'Chào mừng bạn đến với hệ thống của chúng tôi 🎉',
+    const expectedPayload = {
+      to,
+      subject: 'Chào mừng bạn đến với hệ thống của chúng tôi 🎉',
       template: './welcome',
       context: {
-        name: 'Nguyen Van A',
+        name,
       },
-    });
+    };
+
+    // CheckDB/ExternalCall: verify call tới mail provider đúng payload
+    expect(mailerServiceMock.sendMail).toHaveBeenCalledTimes(1);
+    expect(mailerServiceMock.sendMail).toHaveBeenCalledWith(expectedPayload);
   });
 
   // Test Case ID: TC_MAIL_SERVICE_002
-  it('sendPlainEmail goi sendMail voi to/subject/text', async () => {
-    // Muc tieu: xac minh ham gui plain text email dung payload.
-    // Input: to, subject, text.
-    // Ky vong: sendMail duoc goi voi 3 truong to/subject/text.
+  it('[TC_MAIL_SERVICE_002] sendPlainEmail gọi MailerService.sendMail đúng payload (to/subject/text)', async () => {
+    const to = 'notify@example.com';
+    const subject = 'Thong bao he thong';
+    const text = 'Noi dung thong bao';
+
     mailerServiceMock.sendMail.mockResolvedValue(undefined);
 
-    await service.sendPlainEmail(
-      'notify@example.com',
-      'Thong bao he thong',
-      'Noi dung thong bao',
+    await service.sendPlainEmail(to, subject, text);
+
+    const expectedPayload = {
+      to,
+      subject,
+      text,
+    };
+
+    // CheckDB/ExternalCall: verify call tới mail provider đúng dữ liệu
+    expect(mailerServiceMock.sendMail).toHaveBeenCalledTimes(1);
+    expect(mailerServiceMock.sendMail).toHaveBeenCalledWith(expectedPayload);
+  });
+
+  // Test Case ID: TC_MAIL_SERVICE_003
+  it('[TC_MAIL_SERVICE_003] sendWelcomeEmail phải throw lỗi khi MailerService.sendMail thất bại', async () => {
+    const to = 'user@example.com';
+    const name = 'User A';
+
+    const mailError = new Error('SMTP unreachable');
+    mailerServiceMock.sendMail.mockRejectedValue(mailError);
+
+    // CheckDB/ExternalCall: mô phỏng failure từ mail provider
+    await expect(service.sendWelcomeEmail(to, name)).rejects.toThrow(
+      'SMTP unreachable',
+    );
+
+    expect(mailerServiceMock.sendMail).toHaveBeenCalledTimes(1);
+    expect(mailerServiceMock.sendMail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to,
+        subject: 'Chào mừng bạn đến với hệ thống của chúng tôi 🎉',
+        template: './welcome',
+        context: { name },
+      }),
+    );
+  });
+
+  // Test Case ID: TC_MAIL_SERVICE_004
+  it('[TC_MAIL_SERVICE_004] sendPlainEmail phải throw lỗi khi MailerService.sendMail thất bại', async () => {
+    const to = 'user@example.com';
+    const subject = 'Sub';
+    const text = 'Body';
+
+    const mailError = new Error('Send failed');
+    mailerServiceMock.sendMail.mockRejectedValue(mailError);
+
+    // CheckDB/ExternalCall: mô phỏng lỗi từ mail provider
+    await expect(service.sendPlainEmail(to, subject, text)).rejects.toThrow(
+      'Send failed',
     );
 
     expect(mailerServiceMock.sendMail).toHaveBeenCalledTimes(1);
     expect(mailerServiceMock.sendMail).toHaveBeenCalledWith({
-      to: 'notify@example.com',
-      subject: 'Thong bao he thong',
-      text: 'Noi dung thong bao',
+      to,
+      subject,
+      text,
     });
-  });
-
-  // Test Case ID: TC_MAIL_SERVICE_003
-  it('sendWelcomeEmail throw lai loi neu sendMail that bai', async () => {
-    // Muc tieu: dam bao service khong nuot loi khi provider gui mail loi.
-    // Input: sendMail nem exception.
-    // Ky vong: exception duoc throw ra cho layer tren xu ly.
-    const mailError = new Error('SMTP unreachable');
-    mailerServiceMock.sendMail.mockRejectedValue(mailError);
-
-    await expect(
-      service.sendWelcomeEmail('user@example.com', 'User A'),
-    ).rejects.toThrow('SMTP unreachable');
-  });
-
-  // Test Case ID: TC_MAIL_SERVICE_004
-  it('sendPlainEmail throw lai loi neu sendMail that bai', async () => {
-    const mailError = new Error('Send failed');
-    mailerServiceMock.sendMail.mockRejectedValue(mailError);
-
-    await expect(
-      service.sendPlainEmail('user@example.com', 'Sub', 'Body'),
-    ).rejects.toThrow('Send failed');
   });
 });

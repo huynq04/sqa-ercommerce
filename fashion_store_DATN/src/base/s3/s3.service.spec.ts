@@ -68,67 +68,80 @@ describe('UploadService', () => {
   });
 
   // Test Case ID: TC_S3_SERVICE_001
-  it('uploadFile gui PutObjectCommand dung payload va tra ve fileUrl', async () => {
-    // Muc tieu: xac minh luong upload thanh cong.
-    // Input: file hop le voi originalname/buffer/mimetype.
-    // Ky vong:
-    // - s3Client.send duoc goi voi PutObjectCommand dung Bucket/Key/Body/ContentType
-    // - tra ve message + fileUrl dung key da tao.
+  it('[TC_S3_SERVICE_001] uploadFile phải gọi S3 PutObjectCommand đúng payload và trả về fileUrl hợp lệ', async () => {
     const file = buildMockFile();
+
+    const expectedKey = 'uploads/fixed-uuid-123-product-image.png';
+
+    const expectedBucket = 'sqa-ercommerce';
+
     s3ClientMock.send.mockResolvedValue({ ETag: 'etag-001' });
 
     const result = await service.uploadFile(file);
 
+    // Assert flow execution
     expect(s3ClientMock.send).toHaveBeenCalledTimes(1);
+
     const commandArg = s3ClientMock.send.mock
       .calls[0][0] as PutObjectCommand & {
       input?: Record<string, any>;
     };
 
     expect(commandArg).toBeInstanceOf(PutObjectCommand);
-    // CheckDB/ExternalCall: xac minh payload gui len S3 dung theo yeu cau.
+
+    // verify payload gửi lên S3 đúng cấu trúc
     expect(commandArg.input).toEqual({
-      Bucket: 'sqa-ercommerce',
-      Key: 'uploads/fixed-uuid-123-product-image.png',
+      Bucket: expectedBucket,
+      Key: expectedKey,
       Body: file.buffer,
       ContentType: 'image/png',
     });
 
     expect(result).toEqual({
       message: 'Upload success',
-      fileUrl:
-        'http://34.87.35.175:9000/sqa-ercommerce/uploads/fixed-uuid-123-product-image.png',
+      fileUrl: `http://34.87.35.175:9000/${expectedBucket}/${expectedKey}`,
     });
   });
 
   // Test Case ID: TC_S3_SERVICE_002
-  it('uploadFile van giu nguyen ten file goc trong key', async () => {
-    // Muc tieu: bao phu quy tac tao key gom uuid + originalname.
-    const file = buildMockFile({ originalname: 'ao-khoac-mua-dong.jpg' });
+  it('[TC_S3_SERVICE_002] uploadFile phải giữ nguyên originalname trong S3 key (uuid + filename)', async () => {
+    const originalName = 'ao-khoac-mua-dong.jpg';
+
+    const file = buildMockFile({
+      originalname: originalName,
+    });
+
+    const expectedKey = 'uploads/fixed-uuid-123-ao-khoac-mua-dong.jpg';
+
     s3ClientMock.send.mockResolvedValue({});
 
     const result = await service.uploadFile(file);
+
+    // Assert flow execution
+    expect(s3ClientMock.send).toHaveBeenCalledTimes(1);
 
     const commandArg = s3ClientMock.send.mock
       .calls[0][0] as PutObjectCommand & {
       input?: Record<string, any>;
     };
-    expect(commandArg.input?.Key).toBe(
-      'uploads/fixed-uuid-123-ao-khoac-mua-dong.jpg',
-    );
-    expect(result.fileUrl).toContain(
-      'uploads/fixed-uuid-123-ao-khoac-mua-dong.jpg',
-    );
+
+    // verify key giữ nguyên original filename
+    expect(commandArg.input?.Key).toBe(expectedKey);
+
+    // Assert output consistency
+    expect(result.fileUrl).toContain(expectedKey);
   });
 
   // Test Case ID: TC_S3_SERVICE_003
-  it('uploadFile throw lai loi khi S3 client send that bai', async () => {
-    // Muc tieu: dam bao service khong nuot loi tu S3.
-    // Input: s3Client.send reject.
-    // Ky vong: exception duoc throw ra cho layer tren xu ly.
+  it('[TC_S3_SERVICE_003] uploadFile phải throw lỗi khi S3 client send thất bại', async () => {
     const file = buildMockFile();
-    s3ClientMock.send.mockRejectedValue(new Error('S3 unavailable'));
+
+    const s3Error = new Error('S3 unavailable');
+    s3ClientMock.send.mockRejectedValue(s3Error);
 
     await expect(service.uploadFile(file)).rejects.toThrow('S3 unavailable');
+
+    // verify S3 vẫn được gọi 1 lần trước khi fail
+    expect(s3ClientMock.send).toHaveBeenCalledTimes(1);
   });
 });

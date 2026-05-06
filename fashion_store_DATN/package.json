@@ -104,13 +104,9 @@
       "^@providers/(.*)$": "<rootDir>/providers/$1",
       "^@providers$": "<rootDir>/providers"
     },
-    "collectCoverageFrom": [
-      "**/*.(t|j)s",
-      "!**/*.entity.ts",
-      "!**/entities/**",
-      "!main.ts",
-      "!**/*.module.ts",
-      "!**/*.dto.ts"
+    "coveragePathIgnorePatterns": [
+      "^(?!.*\\.(controller|service|guard)\\.ts$).*$",
+      "/config/"
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node",

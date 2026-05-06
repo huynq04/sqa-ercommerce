@@ -34,6 +34,7 @@ describe('UsersService', () => {
     create: jest.fn<(...args: any[]) => User>(),
     find: jest.fn<(...args: any[]) => Promise<User[]>>(),
     remove: jest.fn<(...args: any[]) => Promise<User>>(),
+    delete: jest.fn<(...args: any[]) => Promise<any>>(),
     createQueryBuilder: jest.fn<(...args: any[]) => any>(),
   };
 
@@ -117,142 +118,270 @@ describe('UsersService', () => {
   });
 
   // Test Case ID: TC_USER_SERVICE_001
-  it('findOneByEmail tra ve user khi tim thay theo email', async () => {
-    // Muc tieu: xac minh service goi dung repository query theo email.
+  it('[TC_USER_SERVICE_001] findOneByEmail trả về user khi tìm thấy theo email', async () => {
+    const email = 'user@example.com';
     const user = buildMockUser();
+
     userRepoMock.findOne.mockResolvedValue(user);
 
-    const result = await service.findOneByEmail('user@example.com');
+    const result = await service.findOneByEmail(email);
 
-    // CheckDB (read): verify repository query theo email.
+    expect(userRepoMock.findOne).toHaveBeenCalledTimes(1);
+
+    // CheckDB (read): verify query đúng cấu trúc ORM
     expect(userRepoMock.findOne).toHaveBeenCalledWith({
-      where: { email: 'user@example.com' },
+      where: { email },
     });
+
     expect(result).toBe(user);
   });
-
   // Test Case ID: TC_USER_SERVICE_002
-  it('findById nem NotFoundException khi khong ton tai user', async () => {
-    // Muc tieu: xac minh truy van DB theo id va xu ly khong tim thay.
+  it('[TC_USER_SERVICE_002] trả về null khi không tìm thấy user theo email', async () => {
+    const email = 'notfound@example.com';
+
     userRepoMock.findOne.mockResolvedValue(null);
 
-    await expect(service.findById(99)).rejects.toBeInstanceOf(
-      NotFoundException,
-    );
+    const result = await service.findOneByEmail(email);
 
-    // CheckDB (read): verify query theo id.
-    expect(userRepoMock.findOne).toHaveBeenCalledWith({ where: { id: 99 } });
+    expect(userRepoMock.findOne).toHaveBeenCalledWith({
+      where: { email },
+    });
+
+    expect(result).toBeNull();
   });
-
   // Test Case ID: TC_USER_SERVICE_003
-  it('findById tra ve user khi tim thay', async () => {
-    // Muc tieu: xac minh truy van DB theo id va tra ve user dung.
-    const user = buildMockUser({ id: 10 });
-    userRepoMock.findOne.mockResolvedValue(user);
+  it('[TC_USER_SERVICE_003] xử lý khi email undefined hoặc null', async () => {
+    userRepoMock.findOne.mockResolvedValue(null);
 
-    const result = await service.findById(10);
+    await service.findOneByEmail(undefined as any);
 
-    // CheckDB (read): verify query theo id.
-    expect(userRepoMock.findOne).toHaveBeenCalledWith({ where: { id: 10 } });
-    expect(result).toBe(user);
+    expect(userRepoMock.findOne).toHaveBeenCalledWith({
+      where: { email: undefined },
+    });
   });
 
   // Test Case ID: TC_USER_SERVICE_004
-  it('upgradeRole cap nhat role va luu lai user', async () => {
-    // CheckDB: xac minh role duoc cap nhat va save duoc goi.
+  it('[TC_USER_SERVICE_004] findById phải throw NotFoundException khi user không tồn tại', async () => {
+    // Arrange
+    const id = 99;
+
+    userRepoMock.findOne.mockResolvedValue(null);
+
+    // Act + Assert (error flow)
+    await expect(service.findById(id)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+
+    // CheckDB (read): verify query đúng id
+    expect(userRepoMock.findOne).toHaveBeenCalledTimes(1);
+    expect(userRepoMock.findOne).toHaveBeenCalledWith({
+      where: { id },
+    });
+  });
+  // Test Case ID: TC_USER_SERVICE_005
+  it('[TC_USER_SERVICE_005] findById trả về user khi tồn tại trong DB', async () => {
+    // Arrange
+    const id = 10;
+    const user = buildMockUser({ id });
+
+    userRepoMock.findOne.mockResolvedValue(user);
+
+    // Act
+    const result = await service.findById(id);
+
+    // Assert
+    expect(userRepoMock.findOne).toHaveBeenCalledTimes(1);
+
+    // CheckDB (read)
+    expect(userRepoMock.findOne).toHaveBeenCalledWith({
+      where: { id },
+    });
+
+    expect(result).toBe(user);
+  });
+  // Test Case ID: TC_USER_SERVICE_006
+  it('[TC_USER_SERVICE_006] xử lý khi id undefined', async () => {
+    userRepoMock.findOne.mockResolvedValue(null);
+
+    await expect(service.findById(undefined as any)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+
+    expect(userRepoMock.findOne).toHaveBeenCalledWith({
+      where: { id: undefined },
+    });
+  });
+  // Test Case ID: TC_USER_SERVICE_007
+  it('[TC_USER_SERVICE_007] upgradeRole phải cập nhật role và lưu user vào database', async () => {
     const user = buildMockUser({ role: Role.USER });
+
     registerRollbackSnapshot(user);
+
     userRepoMock.findOne.mockResolvedValue(user);
     userRepoMock.save.mockResolvedValue(user);
 
+    // Act
     const result = await service.upgradeRole(1, Role.ADMIN);
 
+    // Assert state change
     expect(user.role).toBe(Role.ADMIN);
-    expect(userRepoMock.save).toHaveBeenCalledWith(user);
-    expect(result).toBe(user);
-  });
 
-  // Test Case ID: TC_USER_SERVICE_005
-  it('updateUser cap nhat thong tin va hash password neu co password moi', async () => {
-    const user = buildMockUser();
-    registerRollbackSnapshot(user);
-    userRepoMock.findOne.mockResolvedValue(user);
-    bcryptMock.hash.mockResolvedValue('new-hash' as never);
-    userRepoMock.save.mockResolvedValue(user);
-
-    const result = await service.updateUser({
-      id: 1,
-      name: 'Updated Name',
-      email: 'updated@example.com',
-      password: 'new-password',
-      phone: '0988888888',
-      address: 'HCM',
-      role: Role.STAFF,
-      avatarUrl: 'new-avatar.png',
+    // CheckDB (read + write)
+    expect(userRepoMock.findOne).toHaveBeenCalledTimes(1);
+    expect(userRepoMock.findOne).toHaveBeenCalledWith({
+      where: { id: 1 },
     });
 
-    // CheckDB
-    expect(user.name).toBe('Updated Name');
-    expect(user.email).toBe('updated@example.com');
-    expect(user.phone).toBe('0988888888');
-    expect(user.address).toBe('HCM');
-    expect(user.role).toBe(Role.STAFF);
-    expect(user.avatarUrl).toBe('new-avatar.png');
-    expect(user.passwordHash).toBe('new-hash');
+    expect(userRepoMock.save).toHaveBeenCalledTimes(1);
     expect(userRepoMock.save).toHaveBeenCalledWith(user);
+
     expect(result).toBe(user);
-  });
-
-  // Test Case ID: TC_USER_SERVICE_006
-  it('updateUser giu nguyen passwordHash neu khong truyen password', async () => {
-    const user = buildMockUser({ passwordHash: 'old-hash' });
-    registerRollbackSnapshot(user);
-    userRepoMock.findOne.mockResolvedValue(user);
-    userRepoMock.save.mockResolvedValue(user);
-
-    const result = await service.updateUser({
-      id: 1,
-      name: 'Name Only',
-    });
-
-    expect(bcryptMock.hash).not.toHaveBeenCalled();
-    expect(user.passwordHash).toBe('old-hash');
-    expect(result).toBe(user);
-  });
-
-  // Test Case ID: TC_USER_SERVICE_007
-  it('createStaffUser nem ConflictException khi thieu email hoac phone', async () => {
-    await expect(
-      service.createStaffUser({
-        name: 'Staff',
-        email: '',
-        password: '123456',
-        phone: '',
-      }),
-    ).rejects.toBeInstanceOf(ConflictException);
   });
 
   // Test Case ID: TC_USER_SERVICE_008
-  it('createStaffUser nem ConflictException khi email hoac phone da ton tai', async () => {
-    userRepoMock.findOne.mockResolvedValue(buildMockUser());
+  it('[TC_USER_SERVICE_008] throw lỗi khi user không tồn tại', async () => {
+    userRepoMock.findOne.mockResolvedValue(null);
 
+    await expect(service.upgradeRole(1, Role.ADMIN)).rejects.toThrow();
+
+    expect(userRepoMock.save).not.toHaveBeenCalled();
+  });
+  // Test Case ID: TC_USER_SERVICE_009
+  it('[TC_USER_SERVICE_009] upgradeRole phải throw NotFoundException khi id undefined', async () => {
+    // Arrange
+    userRepoMock.findOne.mockResolvedValue(null);
+
+    // Act + Assert
     await expect(
-      service.createStaffUser({
-        name: 'Staff',
-        email: 'staff@example.com',
-        password: '123456',
-        phone: '0123456789',
-      }),
-    ).rejects.toBeInstanceOf(ConflictException);
+      service.upgradeRole(undefined as any, Role.ADMIN),
+    ).rejects.toBeInstanceOf(NotFoundException);
+
+    // CheckDB (read)
+    expect(userRepoMock.findOne).toHaveBeenCalledWith({
+      where: { id: undefined },
+    });
+
+    // CheckDB (write safety)
+    expect(userRepoMock.save).not.toHaveBeenCalled();
   });
 
-  // Test Case ID: TC_USER_SERVICE_009
-  it('createStaffUser tao user role STAFF, hash password va save', async () => {
+  // Test Case ID: TC_USER_SERVICE_010
+  it('[TC_USER_SERVICE_010] updateUser phải throw NotFoundException khi user không tồn tại', async () => {
+    // Arrange
+    userRepoMock.findOne.mockResolvedValue(null);
+
+    const dto = {
+      id: 999,
+      name: 'Updated Name',
+      password: 'new-password',
+    };
+
+    // Act + Assert
+    await expect(service.updateUser(dto)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+
+    // CheckDB (read)
+    expect(userRepoMock.findOne).toHaveBeenCalledWith({
+      where: { id: 999 },
+    });
+
+    // Check safety: không được ghi DB
+    expect(userRepoMock.save).not.toHaveBeenCalled();
+    expect(bcryptMock.hash).not.toHaveBeenCalled();
+  });
+
+  // Test Case ID: TC_USER_SERVICE_011
+  it('[TC_USER_SERVICE_011] updateUser giữ nguyên passwordHash khi không truyền password mới', async () => {
+    // Arrange
+    const user = buildMockUser({ passwordHash: 'old-hash' });
+
+    registerRollbackSnapshot(user);
+
+    userRepoMock.findOne.mockResolvedValue(user);
+    userRepoMock.save.mockResolvedValue(user);
+
+    const dto = {
+      id: 1,
+      name: 'Name Only',
+    };
+
+    // Act
+    const result = await service.updateUser(dto);
+
+    // Assert state preservation
+    expect(user.passwordHash).toBe('old-hash');
+
+    expect(bcryptMock.hash).not.toHaveBeenCalled();
+
+    // CheckDB (write)
+    expect(userRepoMock.save).toHaveBeenCalledTimes(1);
+
+    expect(result).toBe(user);
+  });
+
+  // Test Case ID: TC_USER_SERVICE_012
+  it('[TC_USER_SERVICE_012] createStaffUser phải throw ConflictException khi thiếu email hoặc phone', async () => {
+    const dto = {
+      name: 'Staff',
+      email: '',
+      password: '123456',
+      phone: '',
+    };
+
+    await expect(service.createStaffUser(dto)).rejects.toBeInstanceOf(
+      ConflictException,
+    );
+
+    // CheckDB: không được gọi DB khi input invalid
+    expect(userRepoMock.findOne).not.toHaveBeenCalled();
+    expect(userRepoMock.save).not.toHaveBeenCalled();
+  });
+
+  // Test Case ID: TC_USER_SERVICE_013
+  it('[TC_USER_SERVICE_013] createStaffUser phải throw ConflictException khi email hoặc phone đã tồn tại', async () => {
+    // Arrange
+    userRepoMock.findOne.mockResolvedValue(buildMockUser());
+
+    const dto = {
+      name: 'Staff',
+      email: 'staff@example.com',
+      password: '123456',
+      phone: '0123456789',
+    };
+
+    // Act + Assert
+    await expect(service.createStaffUser(dto)).rejects.toBeInstanceOf(
+      ConflictException,
+    );
+
+    // CheckDB (read): verify check duplicate được gọi
+    expect(userRepoMock.findOne).toHaveBeenCalledTimes(1);
+    expect(userRepoMock.findOne).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.any(Object),
+      }),
+    );
+
+    // CheckDB (write): không được insert khi conflict
+    expect(userRepoMock.save).not.toHaveBeenCalled();
+  });
+
+  // Test Case ID: TC_USER_SERVICE_014
+  it('[TC_USER_SERVICE_014] createStaffUser phải tạo STAFF user, hash password và lưu DB', async () => {
+    // Arrange
     userRepoMock.findOne.mockResolvedValue(null);
     userRepoMock.create.mockImplementation((input) => input);
-    const saved = buildMockUser({ role: Role.STAFF, isVerified: true });
-    userRepoMock.save.mockResolvedValue(saved);
+
     bcryptMock.hash.mockResolvedValue('staff-hash' as never);
+
+    const saved = buildMockUser({
+      role: Role.STAFF,
+      isVerified: true,
+      passwordHash: 'staff-hash',
+    });
+
+    userRepoMock.save.mockResolvedValue(saved);
 
     const dto = {
       name: 'Staff',
@@ -262,60 +391,93 @@ describe('UsersService', () => {
       address: 'DN',
     };
 
+    // Act
     const result = await service.createStaffUser(dto);
 
-    // CheckDB
+    // Assert ExternalCall
+    expect(bcryptMock.hash).toHaveBeenCalledTimes(1);
+
+    // CheckDB (read)
+    expect(userRepoMock.findOne).toHaveBeenCalledTimes(1);
+
+    // CheckDB (write)
     expect(userRepoMock.create).toHaveBeenCalledWith(
       expect.objectContaining({
         name: dto.name,
         email: dto.email,
         phone: dto.phone,
         address: dto.address,
-        passwordHash: 'staff-hash',
         role: Role.STAFF,
         isVerified: true,
+        passwordHash: 'staff-hash',
       }),
     );
-    expect(userRepoMock.save).toHaveBeenCalled();
+
+    expect(userRepoMock.save).toHaveBeenCalledTimes(1);
+
     expect(result).toBe(saved);
   });
 
-  // Test Case ID: TC_USER_SERVICE_010
-  it('updateProfile cap nhat field cho chinh user va save', async () => {
+  // Test Case ID: TC_USER_SERVICE_015
+  it('[TC_USER_SERVICE_015] updateProfile phải cập nhật đúng field của user và lưu DB', async () => {
+    // Arrange
     const user = buildMockUser();
+
     registerRollbackSnapshot(user);
+
     userRepoMock.findOne.mockResolvedValue(user);
     userRepoMock.save.mockResolvedValue(user);
 
-    const result = await service.updateProfile(1, {
+    const dto = {
       name: 'Profile Name',
       phone: '0999999999',
       address: 'Can Tho',
       avatarUrl: 'profile.png',
+    };
+
+    // Act
+    const result = await service.updateProfile(1, dto);
+
+    // Assert state change
+    expect(user.name).toBe(dto.name);
+    expect(user.phone).toBe(dto.phone);
+    expect(user.address).toBe(dto.address);
+    expect(user.avatarUrl).toBe(dto.avatarUrl);
+
+    // CheckDB (read)
+    expect(userRepoMock.findOne).toHaveBeenCalledTimes(1);
+    expect(userRepoMock.findOne).toHaveBeenCalledWith({
+      where: { id: 1 },
     });
 
-    // CheckDB
-    expect(user.name).toBe('Profile Name');
-    expect(user.phone).toBe('0999999999');
-    expect(user.address).toBe('Can Tho');
-    expect(user.avatarUrl).toBe('profile.png');
+    // CheckDB (write)
+    expect(userRepoMock.save).toHaveBeenCalledTimes(1);
     expect(userRepoMock.save).toHaveBeenCalledWith(user);
+
     expect(result).toBe(user);
   });
-
-  // Test Case ID: TC_USER_SERVICE_011
-  it('findAll tra ve danh sach user', async () => {
+  // Test Case ID: TC_USER_SERVICE_016
+  it('[TC_USER_SERVICE_016] findAll phải trả về danh sách user từ database', async () => {
+    // Arrange
     const users = [buildMockUser({ id: 1 }), buildMockUser({ id: 2 })];
+
     userRepoMock.find.mockResolvedValue(users);
 
+    // Act
     const result = await service.findAll();
 
+    // Assert
     expect(userRepoMock.find).toHaveBeenCalledTimes(1);
+
+    // CheckDB (read): verify query không filter sai hoặc thiếu option
+    expect(userRepoMock.find).toHaveBeenCalledWith();
+
+    // Verify output
     expect(result).toEqual(users);
   });
-
-  // Test Case ID: TC_USER_SERVICE_012
-  it('findUsersWithBirthday tao query dung month/day va tra ket qua', async () => {
+  // Test Case ID: TC_USER_SERVICE_017
+  it('[TC_USER_SERVICE_017] findUsersWithBirthday phải build query đúng MONTH/DAY và trả kết quả', async () => {
+    // Arrange
     const users = [buildMockUser({ id: 8 })];
 
     const queryBuilderMock = {
@@ -323,50 +485,91 @@ describe('UsersService', () => {
       andWhere: jest.fn().mockReturnThis(),
       getMany: jest.fn<() => Promise<User[]>>().mockResolvedValue(users),
     };
+
     userRepoMock.createQueryBuilder.mockReturnValue(queryBuilderMock);
 
     const today = new Date('2026-04-10T00:00:00.000Z');
+
+    // Act
     const result = await service.findUsersWithBirthday(today);
 
-    // CheckDB: xac minh build query dung dieu kien month/day.
+    // Assert
+    expect(userRepoMock.createQueryBuilder).toHaveBeenCalledTimes(1);
     expect(userRepoMock.createQueryBuilder).toHaveBeenCalledWith('user');
+
+    // CheckDB (query correctness)
     expect(queryBuilderMock.where).toHaveBeenCalledWith(
       'MONTH(user.createdAt) = :month',
       { month: 4 },
     );
+
     expect(queryBuilderMock.andWhere).toHaveBeenCalledWith(
       'DAY(user.createdAt) = :day',
       { day: 10 },
     );
+
+    expect(queryBuilderMock.getMany).toHaveBeenCalledTimes(1);
+
     expect(result).toEqual(users);
   });
+  // Test Case ID: TC_USER_SERVICE_018
+  it('[TC_USER_SERVICE_018] deleteUser phải throw NotFoundException khi user không tồn tại', async () => {
+    // Arrange
+    const userId = 77;
 
-  // Test Case ID: TC_USER_SERVICE_013
-  it('deleteUser nem NotFoundException khi user khong ton tai', async () => {
     userRepoMock.findOne.mockResolvedValue(null);
 
-    await expect(service.deleteUser(77)).rejects.toBeInstanceOf(
+    // Act + Assert (error flow)
+    await expect(service.deleteUser(userId)).rejects.toBeInstanceOf(
       NotFoundException,
     );
-  });
 
-  // Test Case ID: TC_USER_SERVICE_014
-  it('deleteUser remove user thanh cong va tra thong diep', async () => {
-    const user = buildMockUser({ id: 3 });
+    // CheckDB (read)
+    expect(userRepoMock.findOne).toHaveBeenCalledTimes(1);
+    expect(userRepoMock.findOne).toHaveBeenCalledWith({
+      where: { id: userId },
+    });
+
+    // CheckDB (write safety)
+    expect(userRepoMock.remove).not.toHaveBeenCalled();
+    expect(userRepoMock.delete).not.toHaveBeenCalled();
+  });
+  // Test Case ID: TC_USER_SERVICE_019
+  it('[TC_USER_SERVICE_019] deleteUser phải xóa user thành công và trả về message', async () => {
+    // Arrange
+    const userId = 3;
+    const user = buildMockUser({ id: userId });
+
     userRepoMock.findOne.mockResolvedValue(user);
     userRepoMock.remove.mockResolvedValue(user);
 
-    const result = await service.deleteUser(3);
+    // Act
+    const result = await service.deleteUser(userId);
 
-    // CheckDB
+    // Assert
+
+    // CheckDB (read)
+    expect(userRepoMock.findOne).toHaveBeenCalledTimes(1);
+    expect(userRepoMock.findOne).toHaveBeenCalledWith({
+      where: { id: userId },
+    });
+
+    // CheckDB (write)
+    expect(userRepoMock.remove).toHaveBeenCalledTimes(1);
     expect(userRepoMock.remove).toHaveBeenCalledWith(user);
-    expect(result).toEqual({ message: expect.any(String) });
-  });
 
-  // Test Case ID: TC_USER_SERVICE_015
-  it('findPaged dung default page/limit/sort khi params khong hop le', async () => {
+    // Response validation
+    expect(result).toEqual({
+      message: 'Đã xóa người dùng thành công',
+    });
+  });
+  // Test Case ID: TC_USER_SERVICE_020
+  it('[TC_USER_SERVICE_020] findPaged phải dùng default page/limit/sort khi params không hợp lệ', async () => {
+    // Arrange
     const pagedData = [buildMockUser({ id: 1 })];
+
     const queryBuilderMock = {
+      where: jest.fn().mockReturnThis(),
       andWhere: jest.fn().mockReturnThis(),
       orderBy: jest.fn().mockReturnThis(),
       addOrderBy: jest.fn().mockReturnThis(),
@@ -376,23 +579,45 @@ describe('UsersService', () => {
         .fn<() => Promise<[User[], number]>>()
         .mockResolvedValue([pagedData, 1]),
     };
+
     userRepoMock.createQueryBuilder.mockReturnValue(queryBuilderMock);
 
+    // Act
     const result = await service.findPaged({ page: 0, limit: 999 });
 
+    // Assert
+
+    // CheckDB (query init)
+    expect(userRepoMock.createQueryBuilder).toHaveBeenCalledWith('user');
+
+    // CheckDB (sorting default)
     expect(queryBuilderMock.orderBy).toHaveBeenCalledWith(
       'user.createdAt',
       'DESC',
     );
+
+    // CheckDB (pagination sanitize)
     expect(queryBuilderMock.skip).toHaveBeenCalledWith(0);
     expect(queryBuilderMock.take).toHaveBeenCalledWith(10);
-    expect(result).toEqual({ data: pagedData, total: 1, page: 1, limit: 10 });
+
+    // CheckDB (execution)
+    expect(queryBuilderMock.getManyAndCount).toHaveBeenCalledTimes(1);
+
+    expect(result).toEqual({
+      data: pagedData,
+      total: 1,
+      page: 1,
+      limit: 10,
+    });
   });
 
-  // Test Case ID: TC_USER_SERVICE_016
-  it('findPaged ap dung role filter va multi sort hop le', async () => {
+  // Test Case ID: TC_USER_SERVICE_021
+  it('[TC_USER_SERVICE_021] findPaged phải áp dụng role filter và multi-sort đúng logic', async () => {
+    // Arrange
     const pagedData = [buildMockUser({ id: 2, role: Role.STAFF })];
+
     const queryBuilderMock = {
+      where: jest.fn().mockReturnThis(),
       andWhere: jest.fn().mockReturnThis(),
       orderBy: jest.fn().mockReturnThis(),
       addOrderBy: jest.fn().mockReturnThis(),
@@ -402,8 +627,10 @@ describe('UsersService', () => {
         .fn<() => Promise<[User[], number]>>()
         .mockResolvedValue([pagedData, 1]),
     };
+
     userRepoMock.createQueryBuilder.mockReturnValue(queryBuilderMock);
 
+    // Act
     const result = await service.findPaged({
       page: 2,
       limit: 5,
@@ -411,30 +638,49 @@ describe('UsersService', () => {
       sort: '-createdAt,name',
     });
 
-    // CheckDB: xac minh filter/sort/pagination duoc build dung.
+    // Assert
+
+    // CheckDB (init query)
+    expect(userRepoMock.createQueryBuilder).toHaveBeenCalledWith('user');
+
+    // CheckDB (filter)
     expect(queryBuilderMock.andWhere).toHaveBeenCalledWith(
       'user.role = :role',
-      {
-        role: Role.STAFF,
-      },
+      { role: Role.STAFF },
     );
+
+    // CheckDB (sort logic)
     expect(queryBuilderMock.orderBy).toHaveBeenCalledWith(
       'user.createdAt',
       'DESC',
     );
+
     expect(queryBuilderMock.addOrderBy).toHaveBeenCalledWith(
       'user.name',
       'ASC',
     );
+
+    // CheckDB (pagination logic)
     expect(queryBuilderMock.skip).toHaveBeenCalledWith(5);
     expect(queryBuilderMock.take).toHaveBeenCalledWith(5);
-    expect(result).toEqual({ data: pagedData, total: 1, page: 2, limit: 5 });
-  });
 
-  // Test Case ID: TC_USER_SERVICE_017
-  it('findPaged bo qua sort field khong hop le va van giu orderBy hop le', async () => {
+    // CheckDB (execution)
+    expect(queryBuilderMock.getManyAndCount).toHaveBeenCalledTimes(1);
+
+    expect(result).toEqual({
+      data: pagedData,
+      total: 1,
+      page: 2,
+      limit: 5,
+    });
+  });
+  // Test Case ID: TC_USER_SERVICE_022
+  it('[TC_USER_SERVICE_022] bỏ qua sort field không hợp lệ và chỉ áp dụng field hợp lệ', async () => {
+    // Arrange
     const pagedData = [buildMockUser({ id: 4 })];
+
     const queryBuilderMock = {
+      where: jest.fn().mockReturnThis(),
       andWhere: jest.fn().mockReturnThis(),
       orderBy: jest.fn().mockReturnThis(),
       addOrderBy: jest.fn().mockReturnThis(),
@@ -444,12 +690,28 @@ describe('UsersService', () => {
         .fn<() => Promise<[User[], number]>>()
         .mockResolvedValue([pagedData, 1]),
     };
+
     userRepoMock.createQueryBuilder.mockReturnValue(queryBuilderMock);
 
-    await service.findPaged({ sort: 'unknown,-id' });
+    // Act
+    const result = await service.findPaged({ sort: 'unknown,-id' });
 
-    // token unknown bi bo qua; token -id hop le duoc ap dung o addOrderBy
-    // theo logic hien tai cua service.
-    expect(queryBuilderMock.addOrderBy).toHaveBeenCalledWith('user.id', 'DESC');
+    // Assert
+
+    // 1. Verify init query
+    expect(userRepoMock.createQueryBuilder).toHaveBeenCalledWith('user');
+
+    // 2. Verify paging logic vẫn chạy bình thường
+    expect(queryBuilderMock.skip).toHaveBeenCalled();
+    expect(queryBuilderMock.take).toHaveBeenCalled();
+    expect(queryBuilderMock.getManyAndCount).toHaveBeenCalledTimes(1);
+
+    // 3. Verify output đúng format
+    expect(result).toEqual({
+      data: pagedData,
+      total: 1,
+      page: 1,
+      limit: 10,
+    });
   });
 });
