@@ -36,31 +36,29 @@ describe('UsersController', () => {
   });
 
   // Test Case ID: TC_USER_CONTROLLER_001
-  it('upgradeUser goi usersService.upgradeRole voi userId va role tu body', async () => {
-    // Muc tieu: dam bao endpoint /users/upgrade mapping dung tham so xuong service.
-    // Input: body gom userId va role.
-    // Ky vong: usersService.upgradeRole(userId, role) duoc goi dung va tra ket qua.
+  it('[TC_USER_CONTROLLER_001] USER có thể upgrade role thông qua upgradeUser và truyền đúng dữ liệu xuống service', async () => {
     const body = {
       userId: 10,
       role: Role.STAFF,
     };
-    usersServiceMock.upgradeRole.mockResolvedValue({
+
+    const mockResult = {
       id: 10,
       role: Role.STAFF,
-    });
+    };
 
-    const result = await controller.upgradeUser(body);
+    usersServiceMock.upgradeRole.mockResolvedValue(mockResult);
 
-    // CheckDB (gian tiep): xac minh service layer duoc goi dung tham so.
+    const result = await controller.upgradeUser(body as any);
+
+    expect(usersServiceMock.upgradeRole).toHaveBeenCalledTimes(1);
     expect(usersServiceMock.upgradeRole).toHaveBeenCalledWith(10, Role.STAFF);
-    expect(result).toEqual({ id: 10, role: Role.STAFF });
+
+    expect(result).toEqual(mockResult);
   });
 
   // Test Case ID: TC_USER_CONTROLLER_002
-  it('updateUser goi usersService.updateUser voi dung body', async () => {
-    // Muc tieu: dam bao endpoint /users/update forward full DTO xuong service.
-    // Input: UpdateUserDto.
-    // Ky vong: usersService.updateUser duoc goi 1 lan voi body.
+  it('[TC_USER_CONTROLLER_002] USER có thể cập nhật thông tin thông qua updateUser và truyền đúng DTO xuống service', async () => {
     const body = {
       id: 1,
       name: 'Updated Name',
@@ -70,64 +68,76 @@ describe('UsersController', () => {
       role: Role.ADMIN,
       avatarUrl: 'avatar-new.png',
     };
-    usersServiceMock.updateUser.mockResolvedValue({
+
+    const mockResult = {
       ...body,
       passwordHash: 'hashed',
-    });
+    };
+
+    usersServiceMock.updateUser.mockResolvedValue(mockResult);
 
     const result = await controller.updateUser(body as any);
 
+    expect(usersServiceMock.updateUser).toHaveBeenCalledTimes(1);
     expect(usersServiceMock.updateUser).toHaveBeenCalledWith(body);
-    expect(result).toEqual({ ...body, passwordHash: 'hashed' });
+
+    expect(result).toEqual(mockResult);
   });
 
   // Test Case ID: TC_USER_CONTROLLER_003
-  it('updateMe goi usersService.updateProfile voi req.user.sub va body', async () => {
-    // Muc tieu: dam bao endpoint /users/me lay dung userId tu req.user.sub.
-    // Input: req co user.sub va body profile.
-    // Ky vong: updateProfile(sub, body) duoc goi dung thu tu tham so.
+  it('[TC_USER_CONTROLLER_003] USER có thể cập nhật thông tin cá nhân thông qua updateMe với userId lấy từ req.user.sub', async () => {
     const req = {
       user: {
         sub: 7,
       },
     };
+
     const body = {
       name: 'Profile Name',
       phone: '0888888888',
       address: 'Da Nang',
       avatarUrl: 'me.png',
     };
-    usersServiceMock.updateProfile.mockResolvedValue({
+
+    const mockResult = {
       id: 7,
       ...body,
-    });
+    };
+
+    usersServiceMock.updateProfile.mockResolvedValue(mockResult);
 
     const result = await controller.updateMe(req as any, body);
 
-    // CheckDB (gian tiep): xac minh service layer duoc goi dung userId dang nhap.
+    expect(usersServiceMock.updateProfile).toHaveBeenCalledTimes(1);
     expect(usersServiceMock.updateProfile).toHaveBeenCalledWith(7, body);
-    expect(result).toEqual({ id: 7, ...body });
+
+    expect(result).toEqual(mockResult);
   });
 
   // Test Case ID: TC_USER_CONTROLLER_004
-  it('updateMe van truyen userId undefined neu req.user khong co sub', async () => {
-    // Muc tieu: bao phu hanh vi hien tai cua controller khi req.user.sub bi thieu.
-    // Input: req.user khong co truong sub.
-    // Ky vong: controller van goi service voi undefined (khong auto throw tai controller).
+  it('[TC_USER_CONTROLLER_004] SYSTEM vẫn gọi updateProfile với userId undefined khi req.user không có sub', async () => {
     const req = {
       user: {},
     };
+
     const body = {
       name: 'No Sub',
     };
-    usersServiceMock.updateProfile.mockResolvedValue({ message: 'handled' });
+
+    const mockResult = {
+      message: 'handled',
+    };
+
+    usersServiceMock.updateProfile.mockResolvedValue(mockResult);
 
     const result = await controller.updateMe(req as any, body);
 
+    expect(usersServiceMock.updateProfile).toHaveBeenCalledTimes(1);
     expect(usersServiceMock.updateProfile).toHaveBeenCalledWith(
       undefined,
       body,
     );
-    expect(result).toEqual({ message: 'handled' });
+
+    expect(result).toEqual(mockResult);
   });
 });

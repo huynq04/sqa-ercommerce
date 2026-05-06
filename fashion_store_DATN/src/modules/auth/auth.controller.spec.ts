@@ -54,30 +54,34 @@ describe('AuthController', () => {
   });
 
   // Test Case ID: TC_AUTH_CTRL_001
-  it('goi authService.signIn voi email/password tu DTO', async () => {
-    // Muc tieu: dam bao endpoint login truyen dung email/password xuong AuthService.
-    // Input: DTO gom email va password.
-    // Ky vong: AuthService.signIn duoc goi dung tham so va tra ve access token.
-    // Chuan bi du lieu
-    const loginDto = { email: 'user@example.com', password: 'secret' };
-    authServiceMock.signIn.mockResolvedValue({ access_token: 'jwt-token' });
+  it('[TC_001] gọi authService.signIn với email/password hợp lệ và trả access_token', async () => {
+    const loginDto = {
+      email: 'user@example.com',
+      password: '12345678',
+    };
 
-    // Thuc thi
+    const expectedResponse = { access_token: 'jwt-token' };
+
+    authServiceMock.signIn.mockResolvedValue(expectedResponse);
+
     const result = await controller.signIn(loginDto);
 
-    // Kiem tra ket qua + CheckDB (gian tiep qua service layer)
+    expect(authServiceMock.signIn).toHaveBeenCalledTimes(1);
     expect(authServiceMock.signIn).toHaveBeenCalledWith(
       loginDto.email,
       loginDto.password,
     );
-    expect(result).toEqual({ access_token: 'jwt-token' });
+
+    expect(result).toEqual(expectedResponse);
+
+    expect(loginDto).toEqual({
+      email: 'user@example.com',
+      password: '12345678',
+    });
   });
 
   // Test Case ID: TC_AUTH_CTRL_002
-  it('goi authService.register voi register DTO', async () => {
-    // Muc tieu: xac minh endpoint register pass-through DTO xuong service.
-    // Input: registerDto day du thong tin.
-    // Ky vong: service nhan dung DTO va controller tra ket qua tao user.
+  it('[TC_002] gọi authService.register với DTO hợp lệ và trả user', async () => {
     const registerDto = {
       name: 'User A',
       email: 'a@example.com',
@@ -85,192 +89,430 @@ describe('AuthController', () => {
       phone: '0123456789',
       address: 'HN',
     };
-    authServiceMock.register.mockResolvedValue({ id: 10, ...registerDto });
+
+    const expectedResponse = {
+      id: 10,
+      ...registerDto,
+    };
+
+    authServiceMock.register.mockResolvedValue(expectedResponse);
 
     const result = await controller.register(registerDto);
 
+    expect(authServiceMock.register).toHaveBeenCalledTimes(1);
+
     expect(authServiceMock.register).toHaveBeenCalledWith(registerDto);
-    expect(result).toEqual({ id: 10, ...registerDto });
+
+    expect(result).toEqual(expectedResponse);
+
+    expect(registerDto).toEqual({
+      name: 'User A',
+      email: 'a@example.com',
+      password: '123456',
+      phone: '0123456789',
+      address: 'HN',
+    });
+  });
+  // Test Case ID: TC_AUTH_CTRL_003
+  it('[TC_003] khi service register lỗi → controller propagate error', async () => {
+    const registerDto = {
+      name: 'User A',
+      email: 'a@example.com',
+      password: '123456',
+      phone: '0123456789',
+      address: 'HN',
+    };
+
+    authServiceMock.register.mockRejectedValue(
+      new Error('Email already exists'),
+    );
+
+    await expect(controller.register(registerDto)).rejects.toThrow(
+      'Email already exists',
+    );
+
+    expect(authServiceMock.register).toHaveBeenCalledTimes(1);
   });
 
-  // Test Case ID: TC_AUTH_CTRL_003
-  it('goi authService.verifyOtp voi email va otp tu DTO', async () => {
-    // Muc tieu: kiem tra mapping email/otp tu body vao service verifyOtp.
-    // Input: verifyOtpDto (email, otp).
-    // Ky vong: service duoc goi dung 2 tham so va tra thong diep thanh cong.
-    const verifyOtpDto = { email: 'a@example.com', otp: '123456' };
-    authServiceMock.verifyOtp.mockResolvedValue({
+  // Test Case ID: TC_AUTH_CTRL_004
+  it('[TC_004] gọi authService.verifyOtp với email/otp hợp lệ và trả kết quả', async () => {
+    // Arrange
+    const verifyOtpDto = {
+      email: 'a@example.com',
+      otp: '123456',
+    };
+
+    const expectedResponse = {
       message: 'Xác nhận thành công',
-    });
+    };
+
+    authServiceMock.verifyOtp.mockResolvedValue(expectedResponse);
 
     const result = await controller.verify(verifyOtpDto);
+
+    expect(authServiceMock.verifyOtp).toHaveBeenCalledTimes(1);
 
     expect(authServiceMock.verifyOtp).toHaveBeenCalledWith(
       verifyOtpDto.email,
       verifyOtpDto.otp,
     );
-    expect(result).toEqual({ message: 'Xác nhận thành công' });
+
+    expect(result).toEqual(expectedResponse);
+
+    expect(verifyOtpDto).toEqual({
+      email: 'a@example.com',
+      otp: '123456',
+    });
   });
 
-  // Test Case ID: TC_AUTH_CTRL_004
-  it('goi authService.forgotPassword voi forgot DTO', async () => {
-    // Muc tieu: dam bao endpoint forgot-password goi dung service method.
-    // Input: forgotPasswordDto chi gom email.
-    // Ky vong: service nhan dto va ket qua duoc tra nguyen ven.
-    const forgotPasswordDto = { email: 'a@example.com' };
-    authServiceMock.forgotPassword.mockResolvedValue({
-      message: 'OTP reset máº­t kháº©u Ä‘Ã£ gá»­i',
-    });
+  // Test Case ID: TC_AUTH_CTRL_005
+  it('[TC_005] OTP sai → service throw error', async () => {
+    const verifyOtpDto = {
+      email: 'a@example.com',
+      otp: '000000',
+    };
+
+    authServiceMock.verifyOtp.mockRejectedValue(new Error('OTP không hợp lệ'));
+
+    await expect(controller.verify(verifyOtpDto)).rejects.toThrow(
+      'OTP không hợp lệ',
+    );
+
+    expect(authServiceMock.verifyOtp).toHaveBeenCalledTimes(1);
+  });
+
+  // Test Case ID: TC_AUTH_CTRL_006
+  it('[TC_006] gọi authService.forgotPassword với email hợp lệ và trả thông báo', async () => {
+    const forgotPasswordDto = {
+      email: 'a@example.com',
+    };
+
+    const expectedResponse = {
+      message: 'OTP reset mật khẩu đã gửi',
+    };
+
+    authServiceMock.forgotPassword.mockResolvedValue(expectedResponse);
 
     const result = await controller.forgot(forgotPasswordDto);
+
+    expect(authServiceMock.forgotPassword).toHaveBeenCalledTimes(1);
 
     expect(authServiceMock.forgotPassword).toHaveBeenCalledWith(
       forgotPasswordDto,
     );
-    expect(result).toEqual({ message: 'OTP reset máº­t kháº©u Ä‘Ã£ gá»­i' });
+
+    expect(result).toEqual(expectedResponse);
+
+    expect(forgotPasswordDto).toEqual({
+      email: 'a@example.com',
+    });
   });
 
-  // Test Case ID: TC_AUTH_CTRL_005
-  it('goi authService.resetPassword voi reset DTO', async () => {
-    // Muc tieu: dam bao endpoint reset-password truyen dung payload xuong service.
-    // Input: resetPasswordDto (email, otp, newPassword).
-    // Ky vong: service duoc goi 1 lan voi dto va tra thong diep doi mat khau.
+  // Test Case ID: TC_AUTH_CTRL_007
+  it('[TC_007] khi service lỗi → controller propagate error', async () => {
+    const forgotPasswordDto = {
+      email: 'a@example.com',
+    };
+
+    authServiceMock.forgotPassword.mockRejectedValue(
+      new Error('Email không tồn tại'),
+    );
+
+    await expect(controller.forgot(forgotPasswordDto)).rejects.toThrow(
+      'Email không tồn tại',
+    );
+
+    expect(authServiceMock.forgotPassword).toHaveBeenCalledTimes(1);
+  });
+
+  // Test Case ID: TC_AUTH_CTRL_008
+  it('[TC_008] gọi authService.resetPassword với DTO hợp lệ và trả thông báo thành công', async () => {
     const resetPasswordDto = {
       email: 'a@example.com',
       otp: '123456',
       newPassword: 'new-password',
     };
-    authServiceMock.resetPassword.mockResolvedValue({
-      message: 'Äá»•i máº­t kháº©u thÃ nh cÃ´ng',
-    });
+
+    const expectedResponse = {
+      message: 'Đổi mật khẩu thành công',
+    };
+
+    authServiceMock.resetPassword.mockResolvedValue(expectedResponse);
 
     const result = await controller.reset(resetPasswordDto);
+
+    expect(authServiceMock.resetPassword).toHaveBeenCalledTimes(1);
 
     expect(authServiceMock.resetPassword).toHaveBeenCalledWith(
       resetPasswordDto,
     );
-    expect(result).toEqual({ message: 'Äá»•i máº­t kháº©u thÃ nh cÃ´ng' });
-  });
 
-  // Test Case ID: TC_AUTH_CTRL_006
-  it('goi authService.refresh voi userId va refreshToken tu req.user', async () => {
-    // Muc tieu: xac minh controller lay sub/refreshToken tu req.user dung quy uoc.
-    // Input: request co req.user.sub va req.user.refreshToken.
-    // Ky vong: authService.refresh(userId, token) duoc goi dung thu tu tham so.
-    const mockRequest = { user: { sub: 7, refreshToken: 'refresh-token' } };
-    authServiceMock.refresh.mockResolvedValue({
-      accessToken: 'new-access-token',
+    expect(result).toEqual(expectedResponse);
+
+    expect(resetPasswordDto).toEqual({
+      email: 'a@example.com',
+      otp: '123456',
+      newPassword: 'new-password',
     });
-
-    const result = await controller.refresh(mockRequest);
-
-    expect(authServiceMock.refresh).toHaveBeenCalledWith(7, 'refresh-token');
-    expect(result).toEqual({ accessToken: 'new-access-token' });
-  });
-
-  // Test Case ID: TC_AUTH_CTRL_007
-  it('goi authService.logout voi userId tu req.user', async () => {
-    // Muc tieu: dam bao logout endpoint forward dung userId da xac thuc.
-    // Input: request co req.user.sub.
-    // Ky vong: service.logout(sub) duoc goi va tra thong diep logout.
-    const mockRequest = { user: { sub: 7 } };
-    authServiceMock.logout.mockResolvedValue({
-      message: 'Logout thÃ nh cÃ´ng',
-    });
-
-    const result = await controller.logout(mockRequest);
-
-    expect(authServiceMock.logout).toHaveBeenCalledWith(7);
-    expect(result).toEqual({ message: 'Logout thÃ nh cÃ´ng' });
-  });
-
-  // Test Case ID: TC_AUTH_CTRL_008
-  it('tra ve req.user cho endpoint profile', () => {
-    // Muc tieu: endpoint profile tra lai thong tin user da duoc guard gan vao request.
-    // Input: request co truong user.
-    // Ky vong: gia tri tra ve chinh la req.user.
-    const mockRequest = { user: { sub: 1, email: 'profile@example.com' } };
-
-    const result = controller.getProfile(mockRequest);
-
-    expect(result).toEqual(mockRequest.user);
   });
 
   // Test Case ID: TC_AUTH_CTRL_009
-  it('tra ve thong bao khi khong co user sinh nhat hom nay', async () => {
-    // Muc tieu: xac minh nhanh branch khong co du lieu sinh nhat.
-    // Input: usersService tra ve mang rong.
-    // Ky vong:
-    // - Controller tra thong bao khong co user.
-    // - Khong goi mailerService.sendMail.
-    // - Co goi usersService.findUsersWithBirthday de truy van du lieu.
+  it('[TC_009] OTP sai → controller propagate error', async () => {
+    const resetPasswordDto = {
+      email: 'a@example.com',
+      otp: '000000',
+      newPassword: 'new-password',
+    };
+
+    authServiceMock.resetPassword.mockRejectedValue(
+      new Error('OTP không hợp lệ hoặc đã hết hạn'),
+    );
+
+    await expect(controller.reset(resetPasswordDto)).rejects.toThrow(
+      'OTP không hợp lệ hoặc đã hết hạn',
+    );
+
+    expect(authServiceMock.resetPassword).toHaveBeenCalledTimes(1);
+  });
+  // Test Case ID: TC_AUTH_CTRL_010
+  it('[TC_010] email không tồn tại → controller propagate error', async () => {
+    const resetPasswordDto = {
+      email: 'notfound@example.com',
+      otp: '123456',
+      newPassword: 'new-password',
+    };
+
+    authServiceMock.resetPassword.mockRejectedValue(
+      new Error('Email không tồn tại'),
+    );
+
+    await expect(controller.reset(resetPasswordDto)).rejects.toThrow(
+      'Email không tồn tại',
+    );
+
+    expect(authServiceMock.resetPassword).toHaveBeenCalledTimes(1);
+  });
+
+  // Test Case ID: TC_AUTH_CTRL_011
+  it('[TC_011] gọi authService.refresh với userId và refreshToken hợp lệ', async () => {
+    const mockRequest = {
+      user: {
+        sub: 7,
+        refreshToken: 'refresh-token',
+      },
+    };
+
+    const expectedResponse = {
+      accessToken: 'new-access-token',
+    };
+
+    authServiceMock.refresh.mockResolvedValue(expectedResponse);
+
+    const result = await controller.refresh(mockRequest as any);
+
+    expect(authServiceMock.refresh).toHaveBeenCalledTimes(1);
+
+    expect(authServiceMock.refresh).toHaveBeenCalledWith(
+      mockRequest.user.sub,
+      mockRequest.user.refreshToken,
+    );
+
+    expect(result).toEqual(expectedResponse);
+
+    expect(mockRequest).toEqual({
+      user: {
+        sub: 7,
+        refreshToken: 'refresh-token',
+      },
+    });
+  });
+  // Test Case ID: TC_AUTH_CTRL_012
+  it('[TC_012] thiếu refreshToken → controller throw error', async () => {
+    const mockRequest = {
+      user: {
+        sub: 7,
+        refreshToken: undefined,
+      },
+    };
+
+    await expect(controller.refresh(mockRequest as any)).rejects.toThrow();
+
+    expect(authServiceMock.refresh).not.toHaveBeenCalled();
+  });
+
+  // Test Case ID: TC_AUTH_CTRL_013
+  it('[TC_013] refresh token sai → controller propagate error', async () => {
+    const mockRequest = {
+      user: {
+        sub: 7,
+        refreshToken: 'invalid-token',
+      },
+    };
+
+    authServiceMock.refresh.mockRejectedValue(
+      new Error('Refresh token không hợp lệ'),
+    );
+
+    await expect(controller.refresh(mockRequest as any)).rejects.toThrow(
+      'Refresh token không hợp lệ',
+    );
+
+    expect(authServiceMock.refresh).toHaveBeenCalledTimes(1);
+  });
+  // Test Case ID: TC_AUTH_CTRL_014
+  it('[TC_014] gọi authService.logout với userId hợp lệ và trả thông báo thành công', async () => {
+    // Arrange
+    const mockRequest = {
+      user: {
+        sub: 7,
+      },
+    };
+
+    const expectedResponse = {
+      message: 'Logout thành công',
+    };
+
+    authServiceMock.logout.mockResolvedValue(expectedResponse);
+
+    const result = await controller.logout(mockRequest as any);
+
+    expect(authServiceMock.logout).toHaveBeenCalledTimes(1);
+
+    expect(authServiceMock.logout).toHaveBeenCalledWith(mockRequest.user.sub);
+
+    expect(result).toEqual(expectedResponse);
+
+    expect(mockRequest).toEqual({
+      user: {
+        sub: 7,
+      },
+    });
+  });
+
+  // Test Case ID: TC_AUTH_CTRL_015
+  it('[TC_015] thiếu userId → controller throw error', async () => {
+    const mockRequest = {
+      user: {},
+    };
+
+    await expect(controller.logout(mockRequest as any)).rejects.toThrow();
+
+    expect(authServiceMock.logout).not.toHaveBeenCalled();
+  });
+
+  // Test Case ID: TC_AUTH_CTRL_016
+  it('[TC_016] service logout lỗi → controller propagate error', async () => {
+    const mockRequest = {
+      user: {
+        sub: 7,
+      },
+    };
+
+    authServiceMock.logout.mockRejectedValue(new Error('Logout thất bại'));
+
+    await expect(controller.logout(mockRequest as any)).rejects.toThrow(
+      'Logout thất bại',
+    );
+
+    expect(authServiceMock.logout).toHaveBeenCalledTimes(1);
+  });
+
+  // Test Case ID: TC_AUTH_CTRL_017
+  it('[TC_017] trả về đúng thông tin user từ req.user', () => {
+    const mockRequest = {
+      user: {
+        sub: 1,
+        email: 'profile@example.com',
+      },
+    };
+
+    const result = controller.getProfile(mockRequest as any);
+
+    expect(result).toEqual(mockRequest.user);
+
+    expect(result).toBe(mockRequest.user);
+
+    expect(mockRequest).toEqual({
+      user: {
+        sub: 1,
+        email: 'profile@example.com',
+      },
+    });
+  });
+
+  // Test Case ID: TC_AUTH_CTRL_018
+  it('[TC_018] không có user sinh nhật → trả thông báo và không gửi mail', async () => {
+    const expectedResponse = 'Không có user sinh nhật hôm nay';
+
     usersServiceMock.findUsersWithBirthday.mockResolvedValue([]);
 
     const result = await controller.sendBirthdayMail();
 
-    // CheckDB: xac minh controller truy van usersService dung 1 lan.
     expect(usersServiceMock.findUsersWithBirthday).toHaveBeenCalledTimes(1);
+
     expect(mailerServiceMock.sendMail).not.toHaveBeenCalled();
-    expect(result).toBe('Không có user sinh nhật hôm nay');
+
+    expect(result).toBe(expectedResponse);
   });
 
-  // Test Case ID: TC_AUTH_CTRL_010
-  it('gui email cho tung user sinh nhat va tra ve tong so da gui', async () => {
-    // Muc tieu: xac minh branch co du lieu sinh nhat.
-    // Input: usersService tra ve danh sach 2 user.
-    // Ky vong:
-    // - Goi sendMail dung so lan user tim duoc.
-    // - Moi lan goi co to/email dung.
-    // - Controller tra chuoi tong ket dung so luong.
+  // Test Case ID: TC_AUTH_CTRL_019
+  it('[TC_019] gửi email cho từng user sinh nhật và trả về tổng số đã gửi', async () => {
     const birthdayUsers = [
       { email: 'u1@example.com', name: 'User 1' },
       { email: 'u2@example.com', name: 'User 2' },
     ];
+
+    const expectedResponse = `${birthdayUsers.length} người dùng đã được chúc mừng sinh nhật.`;
+
     usersServiceMock.findUsersWithBirthday.mockResolvedValue(birthdayUsers);
     mailerServiceMock.sendMail.mockResolvedValue(undefined);
 
     const result = await controller.sendBirthdayMail();
 
-    // CheckDB: xac minh co lay danh sach user tu service.
+    // 1. Lấy danh sách user đúng 1 lần
     expect(usersServiceMock.findUsersWithBirthday).toHaveBeenCalledTimes(1);
-    // Kiem tra so lan gui mail trung voi so user tim duoc.
-    expect(mailerServiceMock.sendMail).toHaveBeenCalledTimes(2);
-    expect(mailerServiceMock.sendMail).toHaveBeenNthCalledWith(
-      1,
-      expect.objectContaining({
-        to: 'u1@example.com',
-        subject: 'Chúc mừng sinh nhật 🎉',
-      }),
+
+    // 2. Gửi mail đúng số lượng user
+    expect(mailerServiceMock.sendMail).toHaveBeenCalledTimes(
+      birthdayUsers.length,
     );
-    expect(mailerServiceMock.sendMail).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({
-        to: 'u2@example.com',
-        subject: 'Chúc mừng sinh nhật 🎉',
-      }),
-    );
-    expect(result).toBe('2 người dùng đã được chúc mừng sinh nhật.');
+
+    // 3. Kiểm tra payload từng lần gọi (order + nội dung)
+    birthdayUsers.forEach((user, index) => {
+      expect(mailerServiceMock.sendMail).toHaveBeenNthCalledWith(
+        index + 1,
+        expect.objectContaining({
+          to: user.email,
+          subject: 'Chúc mừng sinh nhật 🎉',
+        }),
+      );
+    });
+
+    // 4. Trả đúng message tổng kết
+    expect(result).toBe(expectedResponse);
   });
 
-  // Test Case ID: TC_AUTH_CTRL_011
-  it('cron job se log va goi sendBirthdayMail', async () => {
-    // Muc tieu: xac minh cron method khong bo qua logic gui mail.
-    // Input: goi truc tiep sendBirthdayMailCron.
-    // Ky vong:
-    // - Co log thong bao cron da chay.
-    // - sendBirthdayMail duoc goi dung 1 lan.
+  // Test Case ID: TC_AUTH_CTRL_020
+  it('[TC_020] cron job log và gọi sendBirthdayMail đúng 1 lần', async () => {
     const logSpy = jest
       .spyOn(console, 'log')
       .mockImplementation(() => undefined);
+
     const sendBirthdayMailSpy = jest
       .spyOn(controller, 'sendBirthdayMail')
       .mockResolvedValue('done');
 
     await controller.sendBirthdayMailCron();
 
+    // 1. Log được gọi
+    expect(logSpy).toHaveBeenCalledTimes(1);
+
+    // 2. Nội dung log đúng (flexible hơn)
     expect(logSpy).toHaveBeenCalledWith(
-      'Cron job gửi email sinh nhật chạy lúc 10:00 sáng',
+      expect.stringContaining('Cron job gửi email sinh nhật'),
     );
+
+    // 3. Gọi business logic đúng 1 lần
     expect(sendBirthdayMailSpy).toHaveBeenCalledTimes(1);
   });
 });

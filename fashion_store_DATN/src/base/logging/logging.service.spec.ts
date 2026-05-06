@@ -37,75 +37,81 @@ describe('LoggingService', () => {
   });
 
   // Test Case ID: TC_LOGGING_SERVICE_001
-  it('constructor goi configure voi cau hinh appenders/categories', () => {
-    // Muc tieu: dam bao logging config duoc khoi tao ngay khi tao service.
-    // Input: khoi tao instance LoggingService.
-    // Ky vong: configure duoc goi 1 lan voi object co appenders va categories.
+  it('[TC_LOGGING_SERVICE_001] LoggingService khởi tạo phải tự động configure logging system với appenders và categories', () => {
     const service = new LoggingService();
 
+    const expectedConfigShape = {
+      appenders: {
+        console: expect.any(Object),
+        file: expect.any(Object),
+        errorFile: expect.any(Object),
+        errorFilter: expect.any(Object),
+      },
+      categories: {
+        default: expect.any(Object),
+      },
+    };
+
     expect(service).toBeDefined();
+
     expect(configureMock).toHaveBeenCalledTimes(1);
     expect(configureMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        appenders: expect.objectContaining({
-          console: expect.any(Object),
-          file: expect.any(Object),
-          errorFile: expect.any(Object),
-          errorFilter: expect.any(Object),
-        }),
-        categories: expect.objectContaining({
-          default: expect.any(Object),
-        }),
-      }),
+      expect.objectContaining(expectedConfigShape),
     );
   });
 
   // Test Case ID: TC_LOGGING_SERVICE_002
-  it('getLogger tra ve logger theo category truyen vao', () => {
-    // Muc tieu: xac minh service wrapper goi dung getLogger(category).
-    // Input: category = UserService.
-    // Ky vong: getLogger cua log4js duoc goi voi category va tra logger.
+  it('[TC_LOGGING_SERVICE_002] LoggingService trả về logger đúng theo category được truyền vào', () => {
     const service = new LoggingService();
 
-    const logger = service.getLogger('UserService');
+    const category = 'UserService';
+    const logger = service.getLogger(category);
 
-    expect(getLoggerMock).toHaveBeenCalledWith('UserService');
+    expect(getLoggerMock).toHaveBeenCalledTimes(1);
+    expect(getLoggerMock).toHaveBeenCalledWith(category);
+
     expect(logger).toBe(loggerMock);
   });
 
   // Test Case ID: TC_LOGGING_SERVICE_003
-  it('getLogger dung category mac dinh la default khi khong truyen', () => {
-    // Muc tieu: dam bao behavior mac dinh cua getLogger().
+  it('[TC_LOGGING_SERVICE_003] LoggingService trả về logger với category mặc định "default" khi không truyền tham số', () => {
     const service = new LoggingService();
 
     const logger = service.getLogger();
 
+    expect(getLoggerMock).toHaveBeenCalledTimes(1);
     expect(getLoggerMock).toHaveBeenCalledWith('default');
+
     expect(logger).toBe(loggerMock);
   });
 
   // Test Case ID: TC_LOGGING_SERVICE_004
-  it('logError goi logger.error voi error.message neu co', () => {
-    // Muc tieu: xac minh logError uu tien message trong object error.
-    // Input: Error('DB failed').
-    // Ky vong: getLogger('Error') va logger.error('DB failed').
+  it('[TC_LOGGING_SERVICE_004] LoggingService ghi log error đúng message từ Error object', () => {
     const service = new LoggingService();
 
-    service.logError(new Error('DB failed'));
+    const error = new Error('DB failed');
 
-    // CheckDB/LogStorage (gian tiep): xac minh log error duoc ghi qua logger.
+    service.logError(error);
+
+    expect(getLoggerMock).toHaveBeenCalledTimes(1);
     expect(getLoggerMock).toHaveBeenCalledWith('Error');
-    expect(loggerMock.error).toHaveBeenCalledWith('DB failed');
+
+    expect(loggerMock.error).toHaveBeenCalledTimes(1);
+    expect(loggerMock.error).toHaveBeenCalledWith(error.message);
   });
 
   // Test Case ID: TC_LOGGING_SERVICE_005
-  it('logError goi logger.error voi input goc neu khong co message', () => {
-    // Muc tieu: bao phu nhanh fallback khi error khong co property message.
+  it('[TC_LOGGING_SERVICE_005] LoggingService ghi log error đúng nguyên gốc khi input không phải Error object', () => {
     const service = new LoggingService();
 
-    service.logError('plain-error-text');
+    const input = 'plain-error-text';
 
+    service.logError(input);
+
+    expect(getLoggerMock).toHaveBeenCalledTimes(1);
     expect(getLoggerMock).toHaveBeenCalledWith('Error');
-    expect(loggerMock.error).toHaveBeenCalledWith('plain-error-text');
+
+    expect(loggerMock.error).toHaveBeenCalledTimes(1);
+    expect(loggerMock.error).toHaveBeenCalledWith(input);
   });
 });

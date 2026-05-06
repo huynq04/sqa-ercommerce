@@ -17,12 +17,10 @@ import { Role } from './role.enum';
 describe('RolesGuard', () => {
   let guard: RolesGuard;
 
-  // Mock Reflector de chu dong dieu khien role metadata theo tung testcase.
   const reflectorMock = {
     getAllAndOverride: jest.fn<(...args: any[]) => Role[] | undefined>(),
   };
 
-  // Helper tao ExecutionContext gia lap cho HTTP request.
   const createExecutionContext = (user?: Record<string, any>) => {
     const request = { user };
 
@@ -41,7 +39,6 @@ describe('RolesGuard', () => {
   };
 
   beforeEach(async () => {
-    // Lam sach lich su goi mock truoc moi testcase.
     jest.clearAllMocks();
 
     const module: TestingModule = await Test.createTestingModule({
@@ -58,54 +55,45 @@ describe('RolesGuard', () => {
   });
 
   afterEach(() => {
-    // Rollback mock state sau moi test.
     jest.restoreAllMocks();
   });
 
-  // Test Case ID: TC_ROLES_GUARD_001
-  it('tra ve true khi route khong yeu cau roles', () => {
-    // Muc tieu: neu route khong gan @Roles thi cho phep truy cap.
-    // Input: requiredRoles = undefined.
-    // Ky vong: canActivate tra ve true.
+  // TC_ROLES_GUARD_001
+  it('[TC_001] cho phép truy cập khi route không yêu cầu roles', () => {
     reflectorMock.getAllAndOverride.mockReturnValue(undefined);
     const { context } = createExecutionContext({ role: Role.USER });
 
     const result = guard.canActivate(context);
 
+    expect(reflectorMock.getAllAndOverride).toHaveBeenCalledTimes(1);
     expect(reflectorMock.getAllAndOverride).toHaveBeenCalledWith(ROLES_KEY, [
       context.getHandler(),
       context.getClass(),
     ]);
+
     expect(result).toBe(true);
   });
 
-  // Test Case ID: TC_ROLES_GUARD_002
-  it('nem ForbiddenException khi route can role nhung request khong co user', () => {
-    // Muc tieu: chan truy cap neu chua dang nhap ma route can role.
-    // Input: requiredRoles co gia tri, request.user = undefined.
-    // Ky vong: nem ForbiddenException.
+  // TC_ROLES_GUARD_002
+  it('[TC_002] ném ForbiddenException khi route yêu cầu role nhưng request không có user', () => {
+    // Arrange
     reflectorMock.getAllAndOverride.mockReturnValue([Role.ADMIN]);
     const { context } = createExecutionContext(undefined);
 
+    // Act & Assert
     expect(() => guard.canActivate(context)).toThrow(ForbiddenException);
   });
 
-  // Test Case ID: TC_ROLES_GUARD_003
-  it('nem ForbiddenException khi user khong co truong role', () => {
-    // Muc tieu: dam bao user phai co thong tin role de xet quyen.
-    // Input: request.user ton tai nhung role bi thieu.
-    // Ky vong: nem ForbiddenException.
+  // TC_ROLES_GUARD_003
+  it('[TC_003] ném ForbiddenException khi user không có trường role', () => {
     reflectorMock.getAllAndOverride.mockReturnValue([Role.STAFF]);
     const { context } = createExecutionContext({ id: 10 });
 
     expect(() => guard.canActivate(context)).toThrow(ForbiddenException);
   });
 
-  // Test Case ID: TC_ROLES_GUARD_004
-  it('tra ve true khi user co role phu hop voi required roles', () => {
-    // Muc tieu: cho phep truy cap khi role cua user khop role yeu cau.
-    // Input: requiredRoles = [ADMIN], user.role = 'admin'.
-    // Ky vong: canActivate tra true.
+  // TC_ROLES_GUARD_004
+  it('[TC_004] cho phép truy cập khi user có role khớp với required roles', () => {
     reflectorMock.getAllAndOverride.mockReturnValue([Role.ADMIN]);
     const { context } = createExecutionContext({ role: Role.ADMIN });
 
@@ -114,11 +102,8 @@ describe('RolesGuard', () => {
     expect(result).toBe(true);
   });
 
-  // Test Case ID: TC_ROLES_GUARD_005
-  it('tra ve true khi user role dang chuoi co chua role yeu cau', () => {
-    // Muc tieu: bao phu logic includes trong code hien tai.
-    // Input: requiredRoles = [STAFF], user.role = 'staff,admin'.
-    // Ky vong: canActivate tra true.
+  // TC_ROLES_GUARD_005
+  it('[TC_005] cho phép truy cập khi user.role là chuỗi chứa role yêu cầu', () => {
     reflectorMock.getAllAndOverride.mockReturnValue([Role.STAFF]);
     const { context } = createExecutionContext({ role: 'staff,admin' });
 
@@ -127,13 +112,36 @@ describe('RolesGuard', () => {
     expect(result).toBe(true);
   });
 
-  // Test Case ID: TC_ROLES_GUARD_006
-  it('nem ForbiddenException khi user khong du quyen', () => {
-    // Muc tieu: chan request khi user role khong nam trong required roles.
-    // Input: requiredRoles = [ADMIN], user.role = 'user'.
-    // Ky vong: nem ForbiddenException voi thong diep khong du quyen.
+  // TC_ROLES_GUARD_006
+  it('[TC_006] ném ForbiddenException khi user không có quyền truy cập', () => {
     reflectorMock.getAllAndOverride.mockReturnValue([Role.ADMIN]);
     const { context } = createExecutionContext({ role: Role.USER });
+
+    expect(() => guard.canActivate(context)).toThrow(ForbiddenException);
+  });
+
+  // TC_ROLES_GUARD_007
+  it('[TC_007] ném ForbiddenException khi user.role là chuỗi nhưng không chứa role hợp lệ', () => {
+    reflectorMock.getAllAndOverride.mockReturnValue([Role.ADMIN]);
+    const { context } = createExecutionContext({ role: 'user,staff' });
+
+    expect(() => guard.canActivate(context)).toThrow(ForbiddenException);
+  });
+
+  // TC_ROLES_GUARD_008
+  it('[TC_008] cho phép truy cập khi requiredRoles có nhiều giá trị và user có 1 role phù hợp', () => {
+    reflectorMock.getAllAndOverride.mockReturnValue([Role.ADMIN, Role.STAFF]);
+    const { context } = createExecutionContext({ role: Role.STAFF });
+
+    const result = guard.canActivate(context);
+
+    expect(result).toBe(true);
+  });
+
+  // TC_ROLES_GUARD_009
+  it('[TC_009] ném ForbiddenException khi user.role là null', () => {
+    reflectorMock.getAllAndOverride.mockReturnValue([Role.ADMIN]);
+    const { context } = createExecutionContext({ role: null });
 
     expect(() => guard.canActivate(context)).toThrow(ForbiddenException);
   });

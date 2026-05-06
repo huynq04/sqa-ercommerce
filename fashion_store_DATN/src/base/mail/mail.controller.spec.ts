@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 
+import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { MailController } from './mail.controller';
 import { MailService } from './mail.service';
 
@@ -8,7 +8,6 @@ describe('MailController', () => {
   const mailServiceMock = {
     sendWelcomeEmail: jest.fn<(...args: any[]) => Promise<void>>(),
   };
-
   beforeEach(() => {
     jest.clearAllMocks();
     controller = new MailController(mailServiceMock as unknown as MailService);

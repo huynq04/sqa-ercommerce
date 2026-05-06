@@ -8,6 +8,7 @@ import {
   jest,
 } from '@jest/globals';
 import * as fs from 'fs';
+import * as path from 'path';
 
 import { HttpExceptionLoggerFilter } from './http-exception.filter';
 
@@ -23,6 +24,8 @@ describe('HttpExceptionLoggerFilter', () => {
   let mkdirSyncSpy: jest.MockedFunction<typeof fs.mkdirSync>;
   let appendFileSyncSpy: jest.MockedFunction<typeof fs.appendFileSync>;
   let consoleErrorSpy: jest.SpiedFunction<typeof console.error>;
+
+  const FIXED_DATE = '2024-01-01T00:00:00.000Z';
 
   const createHttpHost = () => {
     const json = jest.fn();
@@ -43,17 +46,10 @@ describe('HttpExceptionLoggerFilter', () => {
       }),
     } as ArgumentsHost;
 
-    return {
-      host,
-      response,
-      status,
-      json,
-      request,
-    };
+    return { host, status, json };
   };
 
   beforeEach(() => {
-    // Lam sach mock truoc moi test case de dam bao ket qua doc lap.
     jest.clearAllMocks();
 
     existsSyncSpy = fs.existsSync as jest.MockedFunction<typeof fs.existsSync>;
@@ -68,18 +64,20 @@ describe('HttpExceptionLoggerFilter', () => {
     consoleErrorSpy = jest
       .spyOn(console, 'error')
       .mockImplementation(() => undefined);
+
+    jest.useFakeTimers().setSystemTime(new Date(FIXED_DATE));
   });
 
   afterEach(() => {
-    // Rollback: phuc hoi toan bo spy/mock ve trang thai goc.
+    jest.useRealTimers();
     jest.restoreAllMocks();
   });
 
-  // Test Case ID: TC_HTTP_EXCEPTION_FILTER_001
-  it('constructor tao thu muc logs neu chua ton tai', () => {
-    // Muc tieu: dam bao constructor khoi tao environment log.
-    // Input: fs.existsSync(logDir) = false.
-    // Ky vong: fs.mkdirSync duoc goi 1 lan.
+  // CONSTRUCTOR
+  /**
+   * TC_HTTP_EXCEPTION_FILTER_001
+   */
+  it('[TC_001] constructor tạo thư mục logs nếu chưa tồn tại', () => {
     existsSyncSpy.mockReturnValue(false);
 
     const filter = new HttpExceptionLoggerFilter();
@@ -89,11 +87,10 @@ describe('HttpExceptionLoggerFilter', () => {
     expect(mkdirSyncSpy).toHaveBeenCalledTimes(1);
   });
 
-  // Test Case ID: TC_HTTP_EXCEPTION_FILTER_002
-  it('constructor khong tao thu muc logs neu da ton tai', () => {
-    // Muc tieu: tranh tao thu muc thua khi logs da co san.
-    // Input: fs.existsSync(logDir) = true.
-    // Ky vong: fs.mkdirSync khong duoc goi.
+  /**
+   * TC_HTTP_EXCEPTION_FILTER_002
+   */
+  it('[TC_002] constructor không tạo thư mục logs nếu đã tồn tại', () => {
     existsSyncSpy.mockReturnValue(true);
 
     const filter = new HttpExceptionLoggerFilter();
@@ -102,34 +99,59 @@ describe('HttpExceptionLoggerFilter', () => {
     expect(mkdirSyncSpy).not.toHaveBeenCalled();
   });
 
-  // Test Case ID: TC_HTTP_EXCEPTION_FILTER_003
-  it('catch voi HttpException tra ve status/body dung theo exception', () => {
-    // Muc tieu: xac minh branch xu ly HttpException.
-    // Input: BadRequestException voi message tuy chinh.
-    // Ky vong:
-    // - response.status = 400
-    // - response.json nhan body tu HttpException
-    // - appendFileSync duoc goi de ghi log
+  // HTTP EXCEPTION
+  /**
+   * TC_HTTP_EXCEPTION_FILTER_003
+   */
+  it('[TC_003] catch HttpException trả đúng status + message', () => {
     existsSyncSpy.mockReturnValue(true);
     const filter = new HttpExceptionLoggerFilter();
     const { host, status, json } = createHttpHost();
 
-    const exception = new BadRequestException('Du lieu khong hop le');
+    const exception = new BadRequestException('Dữ liệu không hợp lệ');
     filter.catch(exception, host);
 
     expect(status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
-    expect(json).toHaveBeenCalledWith(exception.getResponse());
 
-    // CheckDB/LogStorage: xac minh da ghi log vao file.
+    expect(json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Dữ liệu không hợp lệ',
+      }),
+    );
+
     expect(appendFileSyncSpy).toHaveBeenCalledTimes(1);
-    expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      expect.stringContaining('DEBUG'),
+    );
   });
 
-  // Test Case ID: TC_HTTP_EXCEPTION_FILTER_004
-  it('catch voi exception thuong tra ve 500 va body mac dinh', () => {
-    // Muc tieu: xac minh branch xu ly loi khong phai HttpException.
-    // Input: Error thong thuong.
-    // Ky vong: status 500 + body { success: false, message }.
+  /**
+   * TC_HTTP_EXCEPTION_FILTER_004
+   */
+  it('[TC_004] catch HttpException trả object body', () => {
+    existsSyncSpy.mockReturnValue(true);
+    const filter = new HttpExceptionLoggerFilter();
+    const { host, json } = createHttpHost();
+
+    const exception = new BadRequestException({
+      message: 'Invalid data',
+      error: 'Bad Request',
+    });
+
+    filter.catch(exception, host);
+
+    expect(json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Invalid data',
+      }),
+    );
+  });
+
+  // NORMAL ERROR
+  /**
+   * TC_HTTP_EXCEPTION_FILTER_005
+   */
+  it('[TC_005] catch Error thường trả 500 + message', () => {
     existsSyncSpy.mockReturnValue(true);
     const filter = new HttpExceptionLoggerFilter();
     const { host, status, json } = createHttpHost();
@@ -138,19 +160,21 @@ describe('HttpExceptionLoggerFilter', () => {
     filter.catch(exception, host);
 
     expect(status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
-    expect(json).toHaveBeenCalledWith({
-      success: false,
-      message: 'Unexpected error',
-    });
+
+    expect(json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: false,
+        message: 'Unexpected error',
+      }),
+    );
 
     expect(appendFileSyncSpy).toHaveBeenCalledTimes(1);
   });
 
-  // Test Case ID: TC_HTTP_EXCEPTION_FILTER_005
-  it('catch voi exception thuong khong co message su dung "Internal Server Error"', () => {
-    // Muc tieu: bao phu fallback message mac dinh khi exception.message rong.
-    // Input: object khong co truong message.
-    // Ky vong: message fallback = Internal Server Error.
+  /**
+   * TC_HTTP_EXCEPTION_FILTER_006
+   */
+  it('[TC_006] fallback message khi exception không có message', () => {
     existsSyncSpy.mockReturnValue(true);
     const filter = new HttpExceptionLoggerFilter();
     const { host, status, json } = createHttpHost();
@@ -158,15 +182,19 @@ describe('HttpExceptionLoggerFilter', () => {
     filter.catch({}, host);
 
     expect(status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
-    expect(json).toHaveBeenCalledWith({
-      success: false,
-      message: 'Internal Server Error',
-    });
+
+    expect(json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Internal Server Error',
+      }),
+    );
   });
 
-  // Test Case ID: TC_HTTP_EXCEPTION_FILTER_006
-  it('logLine ghi dung status va keyword http-exception', () => {
-    // Muc tieu: xac minh noi dung log co thong tin status va marker (http-exception).
+  // LOGGING
+  /**
+   * TC_HTTP_EXCEPTION_FILTER_007
+   */
+  it('[TC_007] log chứa đầy đủ thông tin', () => {
     existsSyncSpy.mockReturnValue(true);
     const filter = new HttpExceptionLoggerFilter();
     const { host } = createHttpHost();
@@ -175,9 +203,18 @@ describe('HttpExceptionLoggerFilter', () => {
     filter.catch(exception, host);
 
     const appendCall = appendFileSyncSpy.mock.calls[0];
-    expect(appendCall).toBeDefined();
-    // appendCall[1] la noi dung log line.
-    expect(String(appendCall[1])).toContain('400');
-    expect(String(appendCall[1])).toContain('(http-exception)');
+
+    const filePath = appendCall[0];
+    const logContent = String(appendCall[1]);
+
+    expect(filePath).toContain(path.join('logs', 'http-exception.log'));
+
+    expect(logContent).toContain('DEBUG');
+    expect(logContent).toContain('400');
+    expect(logContent).toContain('Sai format');
+    expect(logContent).toContain('(http-exception)');
+    expect(logContent).toContain(FIXED_DATE);
+
+    expect(logContent).toMatch(/\d{4}-\d{2}-\d{2}T/);
   });
 });

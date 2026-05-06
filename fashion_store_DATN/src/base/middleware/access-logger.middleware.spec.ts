@@ -92,33 +92,39 @@ describe('AccessLoggerMiddleware', () => {
   });
 
   // Test Case ID: TC_ACCESS_LOGGER_001
-  it('constructor tao thu muc logs neu chua ton tai', () => {
-    // Muc tieu: dam bao middleware tao folder log khi app start.
+  it('[TC_ACCESS_LOGGER_001] AccessLoggerMiddleware khởi tạo phải tạo thư mục logs nếu chưa tồn tại', () => {
     existsSyncSpy.mockReturnValue(false);
 
     const middleware = new AccessLoggerMiddleware();
 
     expect(middleware).toBeDefined();
+
+    // verify middleware kiểm tra tồn tại thư mục logs
     expect(existsSyncSpy).toHaveBeenCalledTimes(1);
+
+    //verify middleware tạo thư mục logs khi chưa tồn tại
     expect(mkdirSyncSpy).toHaveBeenCalledTimes(1);
   });
 
   // Test Case ID: TC_ACCESS_LOGGER_002
-  it('constructor khong tao thu muc logs neu da ton tai', () => {
-    // Muc tieu: tranh mkdir thua neu thu muc logs da co.
+  it('[TC_ACCESS_LOGGER_002] AccessLoggerMiddleware không tạo thư mục logs khi thư mục đã tồn tại', () => {
     existsSyncSpy.mockReturnValue(true);
 
     const middleware = new AccessLoggerMiddleware();
 
     expect(middleware).toBeDefined();
+
+    // verify middleware không gọi tạo thư mục khi đã tồn tại
+    expect(existsSyncSpy).toHaveBeenCalledTimes(1);
     expect(mkdirSyncSpy).not.toHaveBeenCalled();
   });
 
   // Test Case ID: TC_ACCESS_LOGGER_003
-  it('use goi next va dang ky su kien finish de ghi access log', () => {
-    // Muc tieu: dam bao middleware khong chan request va co gan logger cho response.
+  it('[TC_ACCESS_LOGGER_003] AccessLoggerMiddleware phải gọi next() và đăng ký event finish để ghi access log', () => {
     existsSyncSpy.mockReturnValue(true);
+
     const middleware = new AccessLoggerMiddleware();
+
     const { req, res, next, finishHandlers } = createReqResNext({
       userName: 'admin01',
       statusCode: 201,
@@ -129,56 +135,82 @@ describe('AccessLoggerMiddleware', () => {
     middleware.use(req as any, res as any, next as any);
 
     expect(next).toHaveBeenCalledTimes(1);
+
+    // middleware phải đăng ký listener finish
     expect(res.on).toHaveBeenCalledWith('finish', expect.any(Function));
 
-    // Gia lap ket thuc response de trigger ghi access log.
     finishHandlers.forEach((handler) => handler());
 
-    // CheckDB/LogStorage: xac minh appendFileSync duoc goi voi log access.
-    const allLogCalls = appendFileSyncSpy.mock.calls.map((call) =>
+    // verify access log được ghi ra file
+    const logLines = appendFileSyncSpy.mock.calls.map((call) =>
       String(call[1]),
     );
-    expect(allLogCalls.some((line) => line.includes('(access)'))).toBe(true);
+
+    expect(logLines.some((line) => line.includes('(access)'))).toBe(true);
+
+    // CheckOutput: verify log console debug/info được gọi
     expect(consoleLogSpy).toHaveBeenCalledTimes(1);
   });
 
   // Test Case ID: TC_ACCESS_LOGGER_004
-  it('ghi debug log khi statusCode >= 400', () => {
-    // Muc tieu: branch loi theo status code phai ghi debug log.
+  it('[TC_ACCESS_LOGGER_004] AccessLoggerMiddleware ghi debug log khi statusCode >= 400', () => {
     existsSyncSpy.mockReturnValue(true);
+
     const middleware = new AccessLoggerMiddleware();
-    const { req, res, next } = createReqResNext({ statusCode: 404 });
+
+    const { req, res, next } = createReqResNext({
+      statusCode: 404,
+    });
 
     middleware.use(req as any, res as any, next as any);
 
-    // Goi send voi body object de middleware parse duoc data.
+    // Trigger response send để middleware xử lý log
     res.send({ message: 'Not Found' });
 
-    const allLogCalls = appendFileSyncSpy.mock.calls.map((call) =>
+    expect(next).toHaveBeenCalledTimes(1);
+
+    // verify error log được ghi ra file
+    const logLines = appendFileSyncSpy.mock.calls.map((call) =>
       String(call[1]),
     );
-    expect(allLogCalls.some((line) => line.includes('(http-exception)'))).toBe(
+
+    expect(logLines.some((line) => line.includes('(http-exception)'))).toBe(
       true,
     );
+
+    //verify error logging được gọi
     expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
   });
 
   // Test Case ID: TC_ACCESS_LOGGER_005
-  it('ghi debug log khi data.success = false du status code < 400', () => {
-    // Muc tieu: branch loi nghiep vu (success=false) phai ghi debug.
+  it('[TC_ACCESS_LOGGER_005] AccessLoggerMiddleware ghi debug log khi business success = false dù statusCode < 400', () => {
     existsSyncSpy.mockReturnValue(true);
+
     const middleware = new AccessLoggerMiddleware();
-    const { req, res, next } = createReqResNext({ statusCode: 200 });
+
+    const { req, res, next } = createReqResNext({
+      statusCode: 200,
+    });
 
     middleware.use(req as any, res as any, next as any);
-    res.send({ success: false, message: 'Business validation failed' });
 
-    const allLogCalls = appendFileSyncSpy.mock.calls.map((call) =>
+    res.send({
+      success: false,
+      message: 'Business validation failed',
+    });
+
+    expect(next).toHaveBeenCalledTimes(1);
+
+    // verify log exception được ghi
+    const logLines = appendFileSyncSpy.mock.calls.map((call) =>
       String(call[1]),
     );
-    expect(allLogCalls.some((line) => line.includes('(http-exception)'))).toBe(
+
+    expect(logLines.some((line) => line.includes('(http-exception)'))).toBe(
       true,
     );
+
+    //  verify error log console được gọi
     expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
   });
 
@@ -201,16 +233,26 @@ describe('AccessLoggerMiddleware', () => {
   });
 
   // Test Case ID: TC_ACCESS_LOGGER_007
-  it('chi ghi debug log mot lan khi res.send duoc goi nhieu lan', () => {
-    // Muc tieu: bien debugLogged ngan ghi debug trung lap.
+  it('[TC_ACCESS_LOGGER_007] AccessLoggerMiddleware chỉ ghi debug log một lần dù res.send được gọi nhiều lần', () => {
+    // Arrange
     existsSyncSpy.mockReturnValue(true);
-    const middleware = new AccessLoggerMiddleware();
-    const { req, res, next } = createReqResNext({ statusCode: 500 });
 
+    const middleware = new AccessLoggerMiddleware();
+
+    const { req, res, next } = createReqResNext({
+      statusCode: 500,
+    });
+
+    // Act
     middleware.use(req as any, res as any, next as any);
+
     res.send({ success: false, message: 'Error 1' });
     res.send({ success: false, message: 'Error 2' });
 
+    // Assert flow execution
+    expect(next).toHaveBeenCalledTimes(1);
+
+    // CheckLogStorage (gián tiếp): chỉ được log 1 lần cho exception
     const debugLines = appendFileSyncSpy.mock.calls
       .map((call) => String(call[1]))
       .filter((line) => line.includes('(http-exception)'));
@@ -219,18 +261,26 @@ describe('AccessLoggerMiddleware', () => {
   });
 
   // Test Case ID: TC_ACCESS_LOGGER_008
-  it('khong ghi debug log khi headersSent = true', () => {
-    // Muc tieu: nhanh chan debug neu response da gui header.
+  it('[TC_ACCESS_LOGGER_008] AccessLoggerMiddleware không ghi debug log khi headersSent = true', () => {
+    // Arrange
     existsSyncSpy.mockReturnValue(true);
+
     const middleware = new AccessLoggerMiddleware();
+
     const { req, res, next } = createReqResNext({
       statusCode: 500,
       headersSent: true,
     });
 
+    // Act
     middleware.use(req as any, res as any, next as any);
+
     res.send({ success: false, message: 'Late error' });
 
+    // Assert flow execution
+    expect(next).toHaveBeenCalledTimes(1);
+
+    //không được ghi exception log khi headers đã sent
     const debugLines = appendFileSyncSpy.mock.calls
       .map((call) => String(call[1]))
       .filter((line) => line.includes('(http-exception)'));

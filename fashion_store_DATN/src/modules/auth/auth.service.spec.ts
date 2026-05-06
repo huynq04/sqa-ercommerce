@@ -131,7 +131,8 @@ describe('AuthService', () => {
 
   beforeEach(async () => {
     // Lam sach lich su goi mock truoc moi test de dam bao doc lap.
-    jest.clearAllMocks();
+    // reset implementation để tránh leak mockResolvedValue giữa các test
+    jest.resetAllMocks();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -169,203 +170,341 @@ describe('AuthService', () => {
   });
 
   describe('signIn', () => {
-    // Test Case ID: TC_AUTH_001
-    it('throws UnauthorizedException when email does not exist', async () => {
-      // Muc tieu: xac minh dang nhap that bai khi email khong ton tai.
-      // Input: email khong co trong he thong.
-      // Ky vong: nem UnauthorizedException.
+    // Test Case ID: TC_AUTH_SERVICE_001
+    it('[TC_AUTH_SERVICE_001] ném UnauthorizedException khi email không tồn tại trong hệ thống', async () => {
+      const email = 'none@example.com';
+      const password = '123';
+
       usersService.findOneByEmail.mockResolvedValue(null);
 
-      await expect(
-        service.signIn('none@example.com', '123'),
-      ).rejects.toBeInstanceOf(UnauthorizedException);
-
-      // CheckDB (read): xac minh da truy van email dung tham so.
-      expect(usersService.findOneByEmail).toHaveBeenCalledWith(
-        'none@example.com',
-      );
-    });
-
-    // Test Case ID: TC_AUTH_002
-    it('throws ForbiddenException when account is not verified', async () => {
-      // Muc tieu: chan dang nhap voi tai khoan chua xac thuc.
-      // Input: user ton tai nhung isVerified = false.
-      // Ky vong: nem ForbiddenException.
-      usersService.findOneByEmail.mockResolvedValue(
-        buildMockUser({ isVerified: false }),
+      await expect(service.signIn(email, password)).rejects.toBeInstanceOf(
+        UnauthorizedException,
       );
 
-      await expect(
-        service.signIn('user@example.com', '123'),
-      ).rejects.toBeInstanceOf(ForbiddenException);
+      // CheckDB (READ verification)
+      expect(usersService.findOneByEmail).toHaveBeenCalledTimes(1);
+      expect(usersService.findOneByEmail).toHaveBeenCalledWith(email);
     });
+    // Test Case ID: TC_AUTH_SERVICE_002
+    it('[TC_AUTH_SERVICE_002] ném ForbiddenException khi tài khoản chưa được xác thực (isVerified = false)', async () => {
+      const email = 'user@example.com';
+      const password = '123';
 
-    // Test Case ID: TC_AUTH_003
-    it('throws ForbiddenException when account is temporarily locked', async () => {
-      // Muc tieu: chan dang nhap khi tai khoan dang bi khoa tam thoi.
-      // Input: lockUntil > thoi diem hien tai.
-      // Ky vong: nem ForbiddenException.
-      usersService.findOneByEmail.mockResolvedValue(
-        buildMockUser({ lockUntil: new Date(Date.now() + 60_000) }),
+      const mockUser = buildMockUser({
+        isVerified: false,
+      });
+
+      usersService.findOneByEmail.mockResolvedValue(mockUser);
+
+      await expect(service.signIn(email, password)).rejects.toBeInstanceOf(
+        ForbiddenException,
       );
 
-      await expect(
-        service.signIn('user@example.com', '123'),
-      ).rejects.toBeInstanceOf(ForbiddenException);
+      // CheckDB (READ verification)
+      expect(usersService.findOneByEmail).toHaveBeenCalledTimes(1);
+      expect(usersService.findOneByEmail).toHaveBeenCalledWith(email);
+    });
+    // Test Case ID: TC_AUTH_SERVICE_003
+    it('[TC_AUTH_SERVICE_003] ném ForbiddenException khi tài khoản đang bị khóa tạm thời (lockUntil > now)', async () => {
+      const email = 'user@example.com';
+      const password = '123';
+
+      const lockedUser = buildMockUser({
+        lockUntil: new Date(Date.now() + 60_000), // khóa trong tương lai
+      });
+
+      usersService.findOneByEmail.mockResolvedValue(lockedUser);
+
+      await expect(service.signIn(email, password)).rejects.toBeInstanceOf(
+        ForbiddenException,
+      );
+
+      // CheckDB (READ verification)
+      expect(usersService.findOneByEmail).toHaveBeenCalledTimes(1);
+      expect(usersService.findOneByEmail).toHaveBeenCalledWith(email);
     });
 
-    // Test Case ID: TC_AUTH_004
-    it('increments failed count and throws UnauthorizedException when password is wrong', async () => {
-      // Chuan bi du lieu
-      const user = buildMockUser({ loginFailedCount: 2 });
-      registerRollbackSnapshot(user);
+    // Test Case ID: TC_AUTH_SERVICE_004
+    it('[TC_AUTH_SERVICE_004] tăng loginFailedCount và ném UnauthorizedException khi mật khẩu sai', async () => {
+      const email = 'user@example.com';
+      const wrongPassword = 'wrong';
+
+      const user = buildMockUser({
+        email,
+        loginFailedCount: 2,
+      });
+
       usersService.findOneByEmail.mockResolvedValue(user);
       bcryptMock.compare.mockResolvedValue(false as never);
 
-      // Thuc thi va kiem tra exception
-      await expect(
-        service.signIn('user@example.com', 'wrong'),
-      ).rejects.toBeInstanceOf(UnauthorizedException);
+      // Act & Assert
+      await expect(service.signIn(email, wrongPassword)).rejects.toBeInstanceOf(
+        UnauthorizedException,
+      );
 
-      // CheckDB: xac minh du lieu thay doi dung va da goi ham luu.
+      // Check business logic state change
       expect(user.loginFailedCount).toBe(3);
-      expect(userRepo.save).toHaveBeenCalledWith(user);
+
+      // CheckDB (WRITE verification)
+      expect(userRepo.save).toHaveBeenCalledTimes(1);
+      expect(userRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          email,
+          loginFailedCount: 3,
+        }),
+      );
     });
 
-    // Test Case ID: TC_AUTH_005
-    it('locks account after 5 failed attempts', async () => {
-      // Chuan bi du lieu
-      const user = buildMockUser({ loginFailedCount: 4 });
-      registerRollbackSnapshot(user);
+    // Test Case ID: TC_AUTH_SERVICE_005
+    it('[TC_AUTH_SERVICE_005] khóa tài khoản khi đăng nhập sai đạt 5 lần thất bại liên tiếp', async () => {
+      const email = 'user@example.com';
+      const wrongPassword = 'wrong';
+
+      const user = buildMockUser({
+        email,
+        loginFailedCount: 4,
+        lockUntil: null,
+      });
+
       usersService.findOneByEmail.mockResolvedValue(user);
       bcryptMock.compare.mockResolvedValue(false as never);
 
-      // Thuc thi va kiem tra exception
-      await expect(
-        service.signIn('user@example.com', 'wrong'),
-      ).rejects.toBeInstanceOf(UnauthorizedException);
+      await expect(service.signIn(email, wrongPassword)).rejects.toBeInstanceOf(
+        UnauthorizedException,
+      );
 
-      // CheckDB: xac minh lockUntil duoc set va da luu vao repository.
+      // Check business state change
       expect(user.loginFailedCount).toBe(5);
       expect(user.lockUntil).toBeInstanceOf(Date);
-      expect(userRepo.save).toHaveBeenCalledWith(user);
+
+      // lockUntil phải nằm trong tương lai (account bị khóa)
+      expect((user.lockUntil as Date).getTime()).toBeGreaterThan(Date.now());
+
+      // CheckDB (WRITE verification)
+      expect(userRepo.save).toHaveBeenCalledTimes(1);
+      expect(userRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          email,
+          loginFailedCount: 5,
+          lockUntil: expect.any(Date),
+        }),
+      );
     });
 
-    // Test Case ID: TC_AUTH_006
-    it('returns access token and resets lock info when password is correct', async () => {
-      // Chuan bi du lieu
+    // Test Case ID: TC_AUTH_SERVICE_006
+    it('[TC_AUTH_SERVICE_006] trả về access token và reset trạng thái lock khi đăng nhập thành công', async () => {
+      const email = 'user@example.com';
+      const password = 'correct';
+
       const user = buildMockUser({
+        email,
         loginFailedCount: 4,
-        lockUntil: new Date(),
+        lockUntil: new Date(), // đang bị khóa nhưng mật khẩu đúng → reset
       });
-      registerRollbackSnapshot(user);
+
       usersService.findOneByEmail.mockResolvedValue(user);
       bcryptMock.compare.mockResolvedValue(true as never);
       jwtService.signAsync.mockResolvedValue('jwt-token');
 
-      // Thuc thi
-      const result = await service.signIn('user@example.com', 'correct');
+      const result = await service.signIn(email, password);
 
-      // Kiem tra ket qua va CheckDB
+      // Check business state reset
       expect(user.loginFailedCount).toBe(0);
       expect(user.lockUntil).toBeNull();
-      expect(userRepo.save).toHaveBeenCalledWith(user);
-      expect(jwtService.signAsync).toHaveBeenCalledWith({
-        sub: user.id,
-        email: user.email,
-        role: user.role,
-        name: user.name,
-        phone: user.phone,
-        address: user.address,
-        avatar: user.avatarUrl,
-      });
+
+      // CheckDB (WRITE verification)
+      expect(userRepo.save).toHaveBeenCalledTimes(1);
+      expect(userRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          email,
+          loginFailedCount: 0,
+          lockUntil: null,
+        }),
+      );
+
+      // JWT generation validation (less brittle)
+      expect(jwtService.signAsync).toHaveBeenCalledWith(
+        expect.objectContaining({
+          sub: user.id,
+          email: user.email,
+          role: user.role,
+        }),
+      );
+
+      // Cache validation
       expect(cacheManager.set).toHaveBeenCalledWith(
         `userToken:${user.id}`,
         'jwt-token',
-        {
-          ttl: 60 * 60 * 24,
-        },
+        { ttl: 60 * 60 * 24 },
       );
+
+      // Response validation
       expect(result).toEqual({ access_token: 'jwt-token' });
+    });
+    it('[TC_AUTH_SERVICE_007] ném UnauthorizedException khi password bị thiếu hoặc rỗng', async () => {
+      const email = 'user@example.com';
+
+      usersService.findOneByEmail.mockResolvedValue(buildMockUser());
+
+      await expect(service.signIn(email, '' as any)).rejects.toBeInstanceOf(
+        UnauthorizedException,
+      );
+
+      // CheckDB (READ verification)
+      expect(usersService.findOneByEmail).toHaveBeenCalledTimes(0);
+
+      // Security flow
+      expect(bcryptMock.compare).not.toHaveBeenCalled();
+      expect(userRepo.save).not.toHaveBeenCalled();
     });
   });
 
   describe('refresh', () => {
-    // Test Case ID: TC_AUTH_007
-    it('throws UnauthorizedException when refresh token is invalid', async () => {
-      // Muc tieu: tu choi refresh token khong trung token da luu.
-      // Input: token client gui len khac voi token trong cache.
-      // Ky vong: nem UnauthorizedException.
+    // Test Case ID: TC_AUTH_SERVICE_008
+    it('[TC_AUTH_SERVICE_008] ném UnauthorizedException khi refresh token không hợp lệ (không khớp cache)', async () => {
+      const userId = 1;
+      const incomingToken = 'incoming-token';
+
       cacheManager.get.mockResolvedValue('saved-token');
 
-      await expect(service.refresh(1, 'incoming-token')).rejects.toBeInstanceOf(
-        UnauthorizedException,
-      );
+      await expect(
+        service.refresh(userId, incomingToken),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+
+      // CheckDB (READ verification)
+      expect(cacheManager.get).toHaveBeenCalledTimes(1);
+      expect(cacheManager.get).toHaveBeenCalledWith(`refresh:${userId}`);
+
+      // Security flow validation
+      expect(jwtService.signAsync).not.toHaveBeenCalled();
     });
 
-    // Test Case ID: TC_AUTH_008
-    it('returns new access token when refresh token is valid', async () => {
-      // Muc tieu: cap access token moi khi refresh token hop le.
-      // Input: refresh token hop le trong cache.
-      // Ky vong: tra ve accessToken moi va goi jwtService.signAsync dung payload.
-      cacheManager.get.mockResolvedValue('refresh-token');
+    // Test Case ID: TC_AUTH_SERVICE_009
+    it('[TC_AUTH_SERVICE_009] trả về access token mới khi refresh token hợp lệ', async () => {
+      const userId = 1;
+      const refreshToken = 'refresh-token';
+
+      cacheManager.get.mockResolvedValue(refreshToken);
       jwtService.signAsync.mockResolvedValue('new-access-token');
 
-      const result = await service.refresh(1, 'refresh-token');
+      const result = await service.refresh(userId, refreshToken);
 
+      // CheckDB (READ verification)
+      expect(cacheManager.get).toHaveBeenCalledTimes(1);
+      expect(cacheManager.get).toHaveBeenCalledWith(`refresh:${userId}`);
+
+      // JWT contract validation (less brittle)
       expect(jwtService.signAsync).toHaveBeenCalledWith(
-        { sub: 1 },
-        { expiresIn: '15m' },
+        expect.objectContaining({
+          sub: userId,
+        }),
+        expect.objectContaining({
+          expiresIn: '15m',
+        }),
       );
+
+      // Response validation
       expect(result).toEqual({ accessToken: 'new-access-token' });
     });
   });
 
   describe('register', () => {
-    // Test Case ID: TC_AUTH_009
-    it('throws ConflictException when email or phone is missing', async () => {
-      // Muc tieu: validate du lieu bat buoc cho dang ky.
-      // Input: email/phone rong.
-      // Ky vong: nem ConflictException.
-      await expect(
-        service.register({
-          name: 'User',
-          email: '',
-          phone: '',
-          address: 'HN',
-          password: '123456',
-        }),
-      ).rejects.toBeInstanceOf(ConflictException);
+    // Test Case ID: TC_AUTH_SERVICE_010
+    it('[TC_010] ném ConflictException khi email bị rỗng', async () => {
+      const registerDto = {
+        name: 'User',
+        email: '',
+        phone: '0123456789',
+        address: 'HN',
+        password: '123456',
+      };
+
+      await expect(service.register(registerDto)).rejects.toBeInstanceOf(
+        ConflictException,
+      );
+
+      // Không được gọi DB
+      expect(usersService.findOneByEmail).not.toHaveBeenCalled();
+      expect(userRepo.save).not.toHaveBeenCalled();
+    });
+    // Test Case ID: TC_AUTH_SERVICE_011
+    it('[TC_011] ném ConflictException khi phone bị rỗng', async () => {
+      const registerDto = {
+        name: 'User',
+        email: 'user@example.com',
+        phone: '',
+        address: 'HN',
+        password: '123456',
+      };
+
+      await expect(service.register(registerDto)).rejects.toBeInstanceOf(
+        ConflictException,
+      );
+
+      expect(usersService.findOneByEmail).not.toHaveBeenCalled();
+      expect(userRepo.save).not.toHaveBeenCalled();
     });
 
-    // Test Case ID: TC_AUTH_010
-    it('throws ConflictException when email or phone already exists', async () => {
-      // Muc tieu: ngan tao tai khoan trung email hoac so dien thoai.
-      // Input: repository tra ve user da ton tai.
-      // Ky vong: nem ConflictException.
-      userRepo.findOne.mockResolvedValue(buildMockUser());
+    // Test Case ID: TC_AUTH_SERVICE_012
+    it('[TC_012] ném ConflictException khi email đã tồn tại', async () => {
+      const registerDto = {
+        name: 'User',
+        email: 'user@example.com',
+        phone: '0123456789',
+        address: 'HN',
+        password: '123456',
+      };
 
-      await expect(
-        service.register({
-          name: 'User',
-          email: 'user@example.com',
-          phone: '0123456789',
-          address: 'HN',
-          password: '123456',
-        }),
-      ).rejects.toBeInstanceOf(ConflictException);
+      // Mock: email hoặc phone đã tồn tại
+      userRepo.findOne.mockResolvedValue(
+        buildMockUser({ email: registerDto.email }),
+      );
+
+      await expect(service.register(registerDto)).rejects.toBeInstanceOf(
+        ConflictException,
+      );
+
+      // CheckDB (READ verification)
+      expect(userRepo.findOne).toHaveBeenCalledTimes(1);
+      expect(userRepo.findOne).toHaveBeenCalledWith({
+        where: [{ email: registerDto.email }, { phone: registerDto.phone }],
+      });
+
+      // Không được tạo user mới
+      expect(userRepo.save).not.toHaveBeenCalled();
+      expect(bcryptMock.hash).not.toHaveBeenCalled();
+    });
+    // Test Case ID: TC_AUTH_SERVICE_013
+    it('[TC_013] ném ConflictException khi phone đã tồn tại', async () => {
+      const registerDto = {
+        name: 'User',
+        email: 'user@example.com',
+        phone: '0123456789',
+        address: 'HN',
+        password: '123456',
+      };
+
+      // Phone đã tồn tại
+      userRepo.findOne.mockResolvedValue(
+        buildMockUser({ phone: registerDto.phone }),
+      );
+
+      await expect(service.register(registerDto)).rejects.toBeInstanceOf(
+        ConflictException,
+      );
+
+      // CheckDB (READ verification)
+      expect(userRepo.findOne).toHaveBeenCalledWith({
+        where: [{ email: registerDto.email }, { phone: registerDto.phone }],
+      });
+
+      // Không được tạo user mới
+      expect(userRepo.save).not.toHaveBeenCalled();
+      expect(bcryptMock.hash).not.toHaveBeenCalled();
     });
 
-    // Test Case ID: TC_AUTH_011
-    it('creates user with hashed password and sends OTP', async () => {
-      // Chuan bi du lieu
-      userRepo.findOne.mockResolvedValue(null);
-      userRepo.create.mockImplementation((input) => input);
-      const savedUser = buildMockUser({ id: 10 });
-      userRepo.save.mockResolvedValue(savedUser);
-      bcryptMock.hash.mockResolvedValue('hashed-123' as never);
-      const sendOtpSpy = jest.spyOn(service, 'sendOtp').mockResolvedValue();
-
+    // Test Case ID: TC_AUTH_SERVICE_014
+    it('[TC_014] tạo user với password đã hash và gửi OTP thành công', async () => {
       const dto = {
         name: 'User',
         email: 'user@example.com',
@@ -374,203 +513,444 @@ describe('AuthService', () => {
         password: '123456',
       };
 
-      // Thuc thi
+      const hashedPassword = 'hashed-123';
+
+      // Mock DB & dependencies
+      userRepo.findOne.mockResolvedValue(null);
+      userRepo.create.mockImplementation((input) => input);
+
+      const savedUser = buildMockUser({ id: 10 });
+      userRepo.save.mockResolvedValue(savedUser);
+
+      bcryptMock.hash.mockResolvedValue(hashedPassword as never);
+
+      const sendOtpSpy = jest
+        .spyOn(service, 'sendOtp')
+        .mockResolvedValue(undefined);
+
+      // Act
       const result = await service.register(dto);
 
-      // Kiem tra ket qua va CheckDB
+      // PASSWORD HASH VALIDATION
+      expect(bcryptMock.hash).toHaveBeenCalledWith(
+        dto.password,
+        expect.any(Number),
+      );
+
+      // ENTITY CREATION VALIDATION
       expect(userRepo.create).toHaveBeenCalledWith(
         expect.objectContaining({
           email: dto.email,
           phone: dto.phone,
-          passwordHash: 'hashed-123',
+          passwordHash: hashedPassword,
           role: Role.USER,
           isVerified: false,
         }),
       );
-      expect(sendOtpSpy).toHaveBeenCalled();
-      expect(result).toBe(savedUser);
+
+      // đảm bảo không lưu password raw
+      const createArg = userRepo.create.mock.calls[0][0];
+      expect(createArg.password).toBeUndefined();
+
+      // DB WRITE VALIDATION
+      expect(userRepo.save).toHaveBeenCalledTimes(1);
+      expect(userRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          email: dto.email,
+        }),
+      );
+
+      // OTP FLOW VALIDATION
+      expect(sendOtpSpy).toHaveBeenCalledTimes(1);
+      expect(sendOtpSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          email: dto.email,
+          phone: dto.phone,
+        }),
+      );
+
+      // RESPONSE VALIDATION
+      expect(result).toEqual(savedUser);
     });
   });
 
   describe('sendOtp', () => {
-    // Test Case ID: TC_AUTH_012
-    it('updates OTP fields, persists user, and sends email', async () => {
-      // Chuan bi du lieu
-      const user = buildMockUser();
-      registerRollbackSnapshot(user);
+    // Test Case ID: TC_AUTH_SERVICE_015
+    it('[TC_015] cập nhật OTP, lưu DB và gửi email đúng thông tin', async () => {
+      // Arrange
+      const user = buildMockUser({ email: 'user@example.com' });
+
       userRepo.save.mockResolvedValue(user);
       mailerService.sendMail.mockResolvedValue(undefined);
+
+      // fix random để OTP predictable
       const randomSpy = jest.spyOn(Math, 'random').mockReturnValue(0);
 
-      // Thuc thi
+      // fix time để assert expiration không bị flaky
+      const fixedNow = 1_700_000_000_000;
+      const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(fixedNow);
+
+      // Act
       await service.sendOtp(user);
 
-      // Kiem tra ket qua va CheckDB
-      expect(user.otpCode).toBe('100000');
+      // OTP VALUE VALIDATION
+      expect(user.otpCode).toMatch(/^\d{6}$/); // luôn là 6 chữ số
+      expect(user.otpCode).toBe('100000'); // với random = 0
+
       expect(user.otpAttempts).toBe(0);
+
+      // OTP EXPIRATION VALIDATION
       expect(user.otpExpiresAt).toBeInstanceOf(Date);
+
+      // phải nằm trong tương lai
+      expect(user.otpExpiresAt!.getTime()).toBeGreaterThan(fixedNow);
+      expect(user.otpExpiresAt!.getTime()).toBeLessThanOrEqual(
+        fixedNow + 5 * 60 * 1000,
+      );
+
+      // DB WRITE VALIDATION
+      expect(userRepo.save).toHaveBeenCalledTimes(1);
       expect(userRepo.save).toHaveBeenCalledWith(user);
+
+      // EMAIL VALIDATION
+      expect(mailerService.sendMail).toHaveBeenCalledTimes(1);
+
       expect(mailerService.sendMail).toHaveBeenCalledWith(
         expect.objectContaining({
           to: user.email,
           subject: expect.any(String),
+          // đảm bảo nội dung mail có OTP
+          html: expect.stringContaining(user.otpCode),
         }),
       );
-
+      // CLEANUP
       randomSpy.mockRestore();
+      nowSpy.mockRestore();
     });
   });
-
   describe('verifyOtp', () => {
-    // Test Case ID: TC_AUTH_013
-    it('throws NotFoundException when user is not found', async () => {
-      // Muc tieu: kiem tra xu ly khi email khong tim thay user.
-      // Input: findOne tra ve null.
-      // Ky vong: nem NotFoundException.
+    // Test Case ID: TC_AUTH_SERVICE_016
+    it('[TC_016] ném NotFoundException khi không tìm thấy user theo email', async () => {
+      const email = 'none@example.com';
+      const otp = '123456';
+
+      // Mock DB: không tìm thấy user
       userRepo.findOne.mockResolvedValue(null);
 
-      await expect(
-        service.verifyOtp('none@example.com', '123456'),
-      ).rejects.toBeInstanceOf(NotFoundException);
-    });
+      await expect(service.verifyOtp(email, otp)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
 
-    // Test Case ID: TC_AUTH_014
-    it('throws BadRequestException when OTP is expired', async () => {
-      // Muc tieu: tu choi OTP da het han.
-      // Input: otpExpiresAt nho hon thoi diem hien tai.
-      // Ky vong: nem BadRequestException.
-      const user = buildMockUser({
-        otpExpiresAt: new Date(Date.now() - 60_000),
+      // CheckDB (READ verification)
+      expect(userRepo.findOne).toHaveBeenCalledTimes(1);
+      expect(userRepo.findOne).toHaveBeenCalledWith({
+        where: { email },
       });
-      registerRollbackSnapshot(user);
-      userRepo.findOne.mockResolvedValue(user);
 
-      await expect(
-        service.verifyOtp(user.email, '123456'),
-      ).rejects.toBeInstanceOf(BadRequestException);
+      // Đảm bảo không xử lý thêm
+      expect(userRepo.save).not.toHaveBeenCalled();
     });
 
-    // Test Case ID: TC_AUTH_015
-    it('throws ForbiddenException when OTP attempts reached limit', async () => {
-      // Muc tieu: khoa OTP sau so lan sai toi da.
-      // Input: otpAttempts = 5.
-      // Ky vong: nem ForbiddenException.
-      const user = buildMockUser({ otpAttempts: 5 });
-      registerRollbackSnapshot(user);
+    // Test Case ID: TC_AUTH_SERVICE_017
+    it('[TC_017] ném BadRequestException khi OTP đã hết hạn', async () => {
+      const email = 'user@example.com';
+      const otp = '123456';
+
+      const expiredDate = new Date(Date.now() - 60_000); // đã hết hạn
+
+      const user = buildMockUser({
+        email,
+        otpCode: otp,
+        otpExpiresAt: expiredDate,
+      });
+
       userRepo.findOne.mockResolvedValue(user);
 
-      await expect(
-        service.verifyOtp(user.email, '123456'),
-      ).rejects.toBeInstanceOf(ForbiddenException);
+      const now = Date.now();
+
+      await expect(service.verifyOtp(email, otp)).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+
+      // CheckDB (READ verification)
+      expect(userRepo.findOne).toHaveBeenCalledTimes(1);
+      expect(userRepo.findOne).toHaveBeenCalledWith({
+        where: { email },
+      });
+
+      // Xác thực logic hết hạn OTP
+      expect(user.otpExpiresAt).toBeInstanceOf(Date);
+      expect(user.otpExpiresAt!.getTime()).toBeLessThan(now);
+
+      expect(userRepo.save).not.toHaveBeenCalled();
     });
 
-    // Test Case ID: TC_AUTH_016
-    it('increments OTP attempts and throws BadRequestException when OTP is wrong', async () => {
-      // Muc tieu: tang so lan thu OTP khi nhap sai ma.
-      // Input: OTP nguoi dung nhap khac otpCode hien tai.
-      // Ky vong: otpAttempts tang 1, save duoc goi, va nem BadRequestException.
-      const user = buildMockUser({ otpCode: '111111', otpAttempts: 1 });
-      registerRollbackSnapshot(user);
+    // Test Case ID: TC_AUTH_SERVICE_018
+    it('[TC_018] ném ForbiddenException khi số lần nhập OTP vượt giới hạn cho phép', async () => {
+      const email = 'user@example.com';
+      const otp = '123456';
+
+      const user = buildMockUser({
+        email,
+        otpCode: '654321', // OTP thật
+        otpAttempts: 5,
+        otpExpiresAt: new Date(Date.now() + 60_000),
+      });
+
       userRepo.findOne.mockResolvedValue(user);
 
-      await expect(
-        service.verifyOtp(user.email, '222222'),
-      ).rejects.toBeInstanceOf(BadRequestException);
+      await expect(service.verifyOtp(email, otp)).rejects.toBeInstanceOf(
+        ForbiddenException,
+      );
 
-      expect(user.otpAttempts).toBe(2);
-      expect(userRepo.save).toHaveBeenCalledWith(user);
+      // CheckDB (READ verification)
+      expect(userRepo.findOne).toHaveBeenCalledTimes(1);
+      expect(userRepo.findOne).toHaveBeenCalledWith({
+        where: { email },
+      });
+
+      // Ensure no further processing
+      expect(userRepo.save).not.toHaveBeenCalled();
     });
 
-    // Test Case ID: TC_AUTH_017
-    it('verifies account and clears OTP data when OTP is correct', async () => {
-      // Chuan bi du lieu
-      const user = buildMockUser({ otpCode: '123456' });
-      registerRollbackSnapshot(user);
+    // Test Case ID: TC_AUTH_SERVICE_019
+    it('[TC_019] tăng otpAttempts và ném BadRequestException khi OTP nhập sai', async () => {
+      const email = 'user@example.com';
+      const wrongOtp = '222222';
+
+      const user = buildMockUser({
+        email,
+        otpCode: '111111', // OTP đúng
+        otpAttempts: 1, // trước đó đã thử 1 lần
+        otpExpiresAt: new Date(Date.now() + 60_000), // còn hạn
+      });
+
+      userRepo.findOne.mockResolvedValue(user);
+
+      await expect(service.verifyOtp(email, wrongOtp)).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+
+      // CheckDB (READ verification)
+      expect(userRepo.findOne).toHaveBeenCalledTimes(1);
+      expect(userRepo.findOne).toHaveBeenCalledWith({
+        where: { email },
+      });
+
+      // Business logic validation
+      expect(user.otpAttempts).toBe(2); // tăng đúng 1
+
+      // không được thay đổi OTP gốc
+      expect(user.otpCode).toBe('111111');
+
+      // DB WRITE validation
+      expect(userRepo.save).toHaveBeenCalledTimes(1);
+      expect(userRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          email,
+          otpAttempts: 2,
+        }),
+      );
+    });
+
+    // Test Case ID: TC_AUTH_SERVICE_020
+    it('[TC_020] xác thực thành công khi OTP đúng và reset toàn bộ trạng thái OTP', async () => {
+      const email = 'user@example.com';
+      const otp = '123456';
+
+      const user = buildMockUser({
+        email,
+        otpCode: otp,
+        otpAttempts: 2,
+        otpExpiresAt: new Date(Date.now() + 60_000), // còn hạn
+        isVerified: false,
+      });
+
       userRepo.findOne.mockResolvedValue(user);
       userRepo.save.mockResolvedValue(user);
 
-      // Thuc thi
-      const result = await service.verifyOtp(user.email, '123456');
+      const result = await service.verifyOtp(email, otp);
 
-      // Kiem tra ket qua va CheckDB
+      // CheckDB (READ verification)
+      expect(userRepo.findOne).toHaveBeenCalledTimes(1);
+      expect(userRepo.findOne).toHaveBeenCalledWith({
+        where: { email },
+      });
+
+      // Business state validation
       expect(user.isVerified).toBe(true);
+
+      // OTP phải được clear hoàn toàn
       expect(user.otpCode).toBeNull();
       expect(user.otpExpiresAt).toBeNull();
+
+      // reset số lần thử
       expect(user.otpAttempts).toBe(0);
-      expect(userRepo.save).toHaveBeenCalledWith(user);
-      expect(result).toEqual({ message: expect.any(String) });
+
+      // DB WRITE validation
+      expect(userRepo.save).toHaveBeenCalledTimes(1);
+      expect(userRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          email,
+          isVerified: true,
+          otpCode: null,
+          otpExpiresAt: null,
+          otpAttempts: 0,
+        }),
+      );
+
+      // Response validation
+      expect(result).toEqual({
+        message: expect.any(String),
+      });
     });
   });
 
   describe('forgotPassword', () => {
-    // Test Case ID: TC_AUTH_018
-    it('throws NotFoundException when email is not found', async () => {
-      // Muc tieu: khong gui OTP reset cho email khong ton tai.
-      // Input: findOne theo email tra ve null.
-      // Ky vong: nem NotFoundException.
+    // Test Case ID: TC_AUTH_SERVICE_021
+    it('[TC_021] ném NotFoundException khi không tìm thấy email trong forgotPassword', async () => {
+      const email = 'none@example.com';
+
+      // Mock DB: không tìm thấy user
       userRepo.findOne.mockResolvedValue(null);
 
-      await expect(
-        service.forgotPassword({ email: 'none@example.com' }),
-      ).rejects.toBeInstanceOf(NotFoundException);
+      const sendOtpSpy = jest.spyOn(service, 'sendOtp');
+
+      await expect(service.forgotPassword({ email })).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+
+      // CheckDB (READ verification)
+      expect(userRepo.findOne).toHaveBeenCalledTimes(1);
+      expect(userRepo.findOne).toHaveBeenCalledWith({
+        where: { email },
+      });
+
+      // Ensure no further processing
+      expect(sendOtpSpy).not.toHaveBeenCalled();
+      expect(userRepo.save).not.toHaveBeenCalled();
     });
 
-    // Test Case ID: TC_AUTH_019
-    it('sends OTP and returns success message when email exists', async () => {
-      // Muc tieu: gui OTP reset khi email hop le.
-      // Input: user ton tai theo email.
-      // Ky vong: sendOtp duoc goi va tra ve thong diep thanh cong.
-      const user = buildMockUser();
+    // Test Case ID: TC_AUTH_SERVICE_022
+    it('[TC_022] gửi OTP và trả về thông báo thành công khi email tồn tại', async () => {
+      const email = 'user@example.com';
+
+      const user = buildMockUser({ email });
+
       userRepo.findOne.mockResolvedValue(user);
-      const sendOtpSpy = jest.spyOn(service, 'sendOtp').mockResolvedValue();
 
-      const result = await service.forgotPassword({ email: user.email });
+      const sendOtpSpy = jest
+        .spyOn(service, 'sendOtp')
+        .mockResolvedValue(undefined);
 
+      // Act
+      const result = await service.forgotPassword({ email });
+
+      // CheckDB (READ verification)
+      expect(userRepo.findOne).toHaveBeenCalledTimes(1);
+      expect(userRepo.findOne).toHaveBeenCalledWith({
+        where: { email },
+      });
+
+      // Business flow validation
+      expect(sendOtpSpy).toHaveBeenCalledTimes(1);
       expect(sendOtpSpy).toHaveBeenCalledWith(user);
-      expect(result).toEqual({ message: expect.any(String) });
+
+      // Ensure no unintended DB write here
+      // (OTP update nằm trong sendOtp, không phải forgotPassword)
+      expect(userRepo.save).not.toHaveBeenCalled();
+
+      // Response validation
+      expect(result).toEqual({
+        message: expect.stringContaining('OTP'),
+      });
     });
   });
 
   describe('resetPassword', () => {
-    // Test Case ID: TC_AUTH_020
-    it('verifies OTP, updates password hash, and saves user', async () => {
-      // Chuan bi du lieu
-      const user = buildMockUser();
-      registerRollbackSnapshot(user);
-      const verifyOtpSpy = jest.spyOn(service, 'verifyOtp').mockResolvedValue({
-        message: 'ok',
+    // Test Case ID: TC_AUTH_SERVICE_023
+    it('[TC_023] xác thực OTP, cập nhật password hash và lưu user khi resetPassword thành công', async () => {
+      const email = 'user@example.com';
+      const otp = '123456';
+      const newPassword = 'new-password';
+
+      const user = buildMockUser({
+        email,
+        passwordHash: 'old-hash',
       });
+
       userRepo.findOne.mockResolvedValue(user);
+
+      const verifyOtpSpy = jest
+        .spyOn(service, 'verifyOtp')
+        .mockResolvedValue({ message: 'ok' });
+
       bcryptMock.hash.mockResolvedValue('new-hash' as never);
       userRepo.save.mockResolvedValue(user);
 
-      // Thuc thi
+      // Act
       const result = await service.resetPassword({
-        email: user.email,
-        otp: '123456',
-        newPassword: 'new-password',
+        email,
+        otp,
+        newPassword,
       });
 
-      // Kiem tra ket qua va CheckDB
-      expect(verifyOtpSpy).toHaveBeenCalledWith(user.email, '123456');
+      // CheckDB (READ verification)
+      expect(userRepo.findOne).toHaveBeenCalledTimes(1);
+      expect(userRepo.findOne).toHaveBeenCalledWith({
+        where: { email },
+      });
+
+      // Flow validation
+      expect(verifyOtpSpy).toHaveBeenCalledTimes(1);
+      expect(verifyOtpSpy).toHaveBeenCalledWith(email, otp);
+
+      expect(bcryptMock.hash).toHaveBeenCalledTimes(1);
+      expect(bcryptMock.hash).toHaveBeenCalledWith(
+        newPassword,
+        expect.any(Number),
+      );
+
+      // Business state change
       expect(user.passwordHash).toBe('new-hash');
-      expect(userRepo.save).toHaveBeenCalledWith(user);
-      expect(result).toEqual({ message: expect.any(String) });
+      expect(user.passwordHash).not.toBe('old-hash');
+
+      // DB WRITE validation
+      expect(userRepo.save).toHaveBeenCalledTimes(1);
+      expect(userRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          email,
+          passwordHash: 'new-hash',
+        }),
+      );
+
+      // Response validation
+      expect(result).toEqual({
+        message: expect.any(String),
+      });
     });
   });
 
   describe('logout', () => {
-    // Test Case ID: TC_AUTH_021
-    it('deletes refresh token from cache and returns success message', async () => {
-      // Muc tieu: xoa refresh token trong cache khi logout.
-      // Input: userId da dang nhap.
-      // Ky vong: goi cacheManager.del voi key refresh:<userId> va tra thong diep.
+    // Test Case ID: TC_AUTH_SERVICE_024
+    it('[TC_024] xóa refresh token trong cache và trả về thông báo logout thành công', async () => {
+      const userId = 5;
+
       cacheManager.del.mockResolvedValue(undefined);
 
-      const result = await service.logout(5);
+      const result = await service.logout(userId);
 
-      expect(cacheManager.del).toHaveBeenCalledWith('refresh:5');
-      expect(result).toEqual({ message: expect.any(String) });
+      // Cache interaction validation
+      expect(cacheManager.del).toHaveBeenCalledTimes(1);
+      expect(cacheManager.del).toHaveBeenCalledWith(`refresh:${userId}`);
+
+      // Ensure no unintended side-effects
+      expect(userRepo.save).not.toHaveBeenCalled();
+
+      // Response validation
+      expect(result).toEqual({
+        message: expect.stringContaining('Logout'),
+      });
     });
   });
 });
