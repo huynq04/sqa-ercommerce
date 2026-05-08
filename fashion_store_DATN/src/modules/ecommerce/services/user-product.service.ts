@@ -18,8 +18,9 @@ export class UserProductService extends BaseService<Product> {
   }
 
   async findAll(query?: QuerySpecificationDto) {
-    query.searchFields = ['name', 'description'];
-    return this.listPaginate(query, {
+    const safeQuery = query ?? ({} as QuerySpecificationDto);
+    safeQuery.searchFields = ['name', 'description'];
+    return this.listPaginate(safeQuery, {
       relations: [
         'category',
         'variants',

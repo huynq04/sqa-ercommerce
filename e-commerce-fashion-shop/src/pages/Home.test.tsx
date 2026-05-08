@@ -95,4 +95,74 @@ describe('Home page', () => {
     expect(consoleErrorSpy).toHaveBeenCalled();
     consoleErrorSpy.mockRestore();
   });
+
+  // TC-home-004: shows loading state while recommendations resolve
+  it('TC-home-004 - shows loading text while recommendations are loading', async () => {
+    // Arrange: token exists, featured loads, recommendations pending
+    Object.defineProperty(globalThis, 'localStorage', {
+      value: { getItem: vi.fn().mockReturnValue('token') },
+      configurable: true,
+    });
+    (globalThis as any).fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ data: [] }) });
+    let resolveRec: (value: any) => void;
+    const recPromise = new Promise((resolve) => {
+      resolveRec = resolve as any;
+    });
+    mockGetRecommendations.mockReturnValueOnce(recPromise);
+
+    // Act
+    render(<Home />, { wrapper: Wrapper });
+
+    // Assert: loading state appears
+    await waitFor(() =>
+      expect(screen.getByText('Đang tải gợi ý...')).toBeInTheDocument(),
+    );
+
+    // Cleanup
+    resolveRec!([]);
+  });
+
+  // TC-home-005: shows recommendation section when data returned
+  it('TC-home-005 - renders recommendations when API returns data', async () => {
+    // Arrange: token exists and API returns recommendations
+    Object.defineProperty(globalThis, 'localStorage', {
+      value: { getItem: vi.fn().mockReturnValue('token') },
+      configurable: true,
+    });
+    (globalThis as any).fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ data: [] }) });
+    mockGetRecommendations.mockResolvedValueOnce([
+      { id: 1, name: 'Rec-1', price: 100 },
+      { id: 2, name: 'Rec-2', price: 200 },
+    ]);
+
+    // Act
+    render(<Home />, { wrapper: Wrapper });
+
+    // Assert
+    await waitFor(() =>
+      expect(screen.getByText('Sản phẩm bạn có thể quan tâm')).toBeInTheDocument(),
+    );
+    expect(screen.getByText('Rec-1')).toBeInTheDocument();
+    expect(screen.getByText('Rec-2')).toBeInTheDocument();
+  });
+
+  // TC-home-006: hides recommendation section on unauthorized error
+  it('TC-home-006 - hides recommendations when API returns unauthorized', async () => {
+    // Arrange
+    Object.defineProperty(globalThis, 'localStorage', {
+      value: { getItem: vi.fn().mockReturnValue('token') },
+      configurable: true,
+    });
+    (globalThis as any).fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ data: [] }) });
+    mockGetRecommendations.mockRejectedValueOnce(new Error('unauthorized'));
+
+    // Act
+    render(<Home />, { wrapper: Wrapper });
+
+    // Assert
+    await waitFor(() =>
+      expect(screen.queryByText('Sản phẩm bạn có thể quan tâm')).not.toBeInTheDocument(),
+    );
+    expect(screen.queryByText('Không thể tải gợi ý ngay bây giờ.')).not.toBeInTheDocument();
+  });
 });

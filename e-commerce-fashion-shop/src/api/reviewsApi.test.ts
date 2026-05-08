@@ -111,4 +111,64 @@ describe('reviewsApi', () => {
     // Rollback: reset mocks in afterEach
     await expect(getProductReviews(99, { page: 1, limit: 20, sort: '-createdAt' })).rejects.toThrow(/reviews failed/);
   });
+
+  // TC-reviews-api-007: checkOrderItemReview throws on non-ok non-404
+  it('TC-reviews-api-007 - checkOrderItemReview throws on non-404 error', async () => {
+    // Arrange
+    (globalThis as any).fetch = vi.fn().mockResolvedValue({ ok: false, status: 500, text: async () => 'boom' });
+
+    // Act + Assert
+    await expect(checkOrderItemReview('tok', 222)).rejects.toThrow(/boom/);
+  });
+
+  // TC-reviews-api-008: getProductReviews omits query when params not provided
+  it('TC-reviews-api-008 - getProductReviews calls base endpoint without query', async () => {
+    // Arrange
+    const sample = { data: [], total: 0, page: 1, limit: 10 };
+    (globalThis as any).fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => sample });
+
+    // Act
+    await getProductReviews(5);
+
+    // Assert
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringMatching(/\/reviews\/product\/5$/),
+      expect.objectContaining({ headers: {} }),
+    );
+  });
+
+  // TC-reviews-api-009: getProductReviews includes auth header when token provided
+  it('TC-reviews-api-009 - getProductReviews includes auth header when token provided', async () => {
+    // Arrange
+    const sample = { data: [], total: 0, page: 1, limit: 10 };
+    (globalThis as any).fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => sample });
+
+    // Act
+    await getProductReviews(5, { page: 1 }, 'tok');
+
+    // Assert
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/reviews/product/5?page=1'),
+      expect.objectContaining({
+        headers: expect.objectContaining({ Authorization: 'Bearer tok' }),
+      }),
+    );
+  });
+
+  // TC-reviews-api-010: getProductReviews skips falsy query params
+  it('TC-reviews-api-010 - getProductReviews skips page/limit/q when falsy', async () => {
+    // Arrange
+    const sample = { data: [], total: 0, page: 0, limit: 0 };
+    (globalThis as any).fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => sample });
+
+    // Act
+    await getProductReviews(8, { page: 0, limit: 0, q: '' });
+
+    // Assert
+    const calledUrl = (fetch as any).mock.calls[0][0] as string;
+    expect(calledUrl).toContain('/reviews/product/8');
+    expect(calledUrl).not.toContain('page=0');
+    expect(calledUrl).not.toContain('limit=0');
+    expect(calledUrl).not.toContain('q=');
+  });
 });

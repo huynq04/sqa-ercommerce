@@ -1,10 +1,12 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { UserCategoryController } from '../controllers/user-category.controller';
-import { UserCategoryService } from './user-category.service';
 
 describe('UserCategoryController', () => {
   let controller: UserCategoryController;
-  const mockService: any = { findAll: jest.fn(), findById: jest.fn() };
+  // Service giả lập để kiểm tra forwarding logic của controller.
+  const mockService: any = {
+    findAll: jest.fn(),
+    findById: jest.fn(),
+  };
 
   beforeEach(() => {
     controller = new UserCategoryController(mockService);
@@ -13,46 +15,48 @@ describe('UserCategoryController', () => {
   afterEach(() => jest.clearAllMocks());
 
   it('TC-USER-CATEGORY-CONTROLLER-001 - getAll forwards to service', async () => {
-    // TC-USER-CATEGORY-CONTROLLER-001: getAll forwards to service
-    // Arrange: setup mock data / input
-    // CheckDB: mocked - no DB touch
-    // Act: call function
-    // Assert: verify output and behavior
-    // Rollback: mocked - nothing to rollback
-    // Arrange
-    const query = {} as any;
-    mockService.findAll.mockResolvedValue(['a']);
+    // Arrange: query phân trang và dữ liệu giả trả về.
+    const query = { page: 1 } as any;
+    mockService.findAll.mockResolvedValue({ items: [], total: 0 });
+
     // Act
-    const res = await controller.getAll(query);
-    // Assert
+    const result = await controller.getAll(query);
+
+    // Assert: controller phải chuyển query đúng sang service.findAll.
     expect(mockService.findAll).toHaveBeenCalledWith(query);
-    expect(res).toEqual(['a']);
+    expect(result).toEqual({ items: [], total: 0 });
   });
 
-  it('TC-USER-CATEGORY-CONTROLLER-002 - getOne forwards id to service', async () => {
-    // TC-USER-CATEGORY-CONTROLLER-002: getOne forwards id to service
-    // Arrange: setup mock data / input
-    // CheckDB: mocked - no DB touch
-    // Act: call function
-    // Assert: verify output and behavior
-    // Rollback: mocked - nothing to rollback
-    // Arrange
-    mockService.findById.mockResolvedValue({ id: 2 });
+  it('TC-USER-CATEGORY-CONTROLLER-002 - getAll forwards undefined query', async () => {
+    mockService.findAll.mockResolvedValue({ items: [], total: 0 });
+
+    const result = await controller.getAll(undefined as any);
+
+    expect(mockService.findAll).toHaveBeenCalledWith(undefined);
+    expect(result).toEqual({ items: [], total: 0 });
+  });
+
+  it('TC-USER-CATEGORY-CONTROLLER-003 - getAll should bubble error from service', async () => {
+    mockService.findAll.mockRejectedValue(new Error('db fail'));
+
+    await expect(controller.getAll({ page: 1 } as any)).rejects.toThrow('db fail');
+  });
+
+  it('TC-USER-CATEGORY-CONTROLLER-004 - getOne forwards id to service', async () => {
+    // Arrange: mock kết quả khi tìm category theo id.
+    mockService.findById.mockResolvedValue({ id: 2, name: 'ao so mi', description: 'danh muc' });
+
     // Act
-    const res = await controller.getOne(2);
-    // Assert
+    const result = await controller.getOne(2);
+
+    // Assert: xác minh id được forward chính xác.
     expect(mockService.findById).toHaveBeenCalledWith(2);
+    expect(result).toEqual({ id: 2, name: 'ao so mi', description: 'danh muc' });
   });
 
-  it('TC-USER-CATEGORY-CONTROLLER-003 - getAll propagates errors', async () => {
-    // TC-USER-CATEGORY-CONTROLLER-003: propagate errors from service.findAll
-    mockService.findAll.mockRejectedValue(new Error('fail'));
-    await expect(controller.getAll({} as any)).rejects.toThrow('fail');
-  });
+  it('TC-USER-CATEGORY-CONTROLLER-005 - getOne should bubble error from service', async () => {
+    mockService.findById.mockRejectedValue(new Error('not found'));
 
-  it('TC-USER-CATEGORY-CONTROLLER-004 - getOne propagates errors', async () => {
-    // TC-USER-CATEGORY-CONTROLLER-004: propagate errors from service.findById
-    mockService.findById.mockRejectedValue(new Error('notfound'));
-    await expect(controller.getOne(2)).rejects.toThrow('notfound');
+    await expect(controller.getOne(999)).rejects.toThrow('not found');
   });
 });
