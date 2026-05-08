@@ -1,9 +1,9 @@
 import { Controller, Patch, Body, UseGuards, Req } from '@nestjs/common';
-import { RolesGuard } from 'src/modules/auth/roles.guard';
-import { Roles } from 'src/modules/auth/roles.decorator';
+import { RolesGuard } from '@modules/auth/roles.guard';
+import { Roles } from '@modules/auth/roles.decorator';
 import { UsersService } from '@modules/user/services/user.service';
-import { Role } from 'src/modules/auth/role.enum';
-import { AuthGuard } from 'src/modules/auth/auth.guard';
+import { Role } from '@modules/auth/role.enum';
+import { AuthGuard } from '@modules/auth/auth.guard';
 import { UpgradeUserDto } from '@modules/user/dto/upgrade-user.dto';
 import { UpdateUserDto } from '@modules/user/dto/update-user.dto';
 import { UpdateProfileDto } from '@modules/user/dto/update-profile.dto';
