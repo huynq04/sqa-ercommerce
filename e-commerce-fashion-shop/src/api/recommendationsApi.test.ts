@@ -85,4 +85,40 @@ describe('recommendationsApi', () => {
     );
     expect((fetch as any).mock.calls[0][0]).not.toContain('?limit=');
   });
+
+  // TC-recommendations-api-005: uses default limit when not provided
+  it('TC-recommendations-api-005 - uses default limit when no limit provided', async () => {
+    // Arrange
+    Object.defineProperty(globalThis, 'localStorage', {
+      value: { getItem: vi.fn().mockReturnValue('tok') },
+      configurable: true,
+    });
+    (globalThis as any).fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => [] });
+
+    // Act
+    await getRecommendations();
+
+    // Assert
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/recommendations?limit=8'),
+      expect.any(Object),
+    );
+  });
+
+  // TC-recommendations-api-006: returns empty when token is empty string
+  it('TC-recommendations-api-006 - returns empty array when token is empty string', async () => {
+    // Arrange
+    Object.defineProperty(globalThis, 'localStorage', {
+      value: { getItem: vi.fn().mockReturnValue('') },
+      configurable: true,
+    });
+    (globalThis as any).fetch = vi.fn();
+
+    // Act
+    const res = await getRecommendations(5);
+
+    // Assert
+    expect(res).toEqual([]);
+    expect(fetch).not.toHaveBeenCalled();
+  });
 });

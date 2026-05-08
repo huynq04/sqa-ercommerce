@@ -64,4 +64,56 @@ describe('categoriesApi', () => {
     expect(res).toEqual(sample);
     expect(fetch).toHaveBeenCalledWith(expect.stringContaining('/categories/9'));
   });
+
+  // TC-categories-api-005: getCategories throws on non-ok
+  it('TC-categories-api-005 - getCategories throws on non-ok', async () => {
+    // Arrange
+    (globalThis as any).fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      text: async () => 'bad request',
+    });
+
+    // Act + Assert
+    await expect(getCategories()).rejects.toThrow(/bad request/);
+  });
+
+  // TC-categories-api-006: getCategories omits query when params not provided
+  it('TC-categories-api-006 - getCategories calls base endpoint without query', async () => {
+    // Arrange
+    const sample = { data: [], total: 0, page: 1, limit: 10 };
+    (globalThis as any).fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => sample });
+
+    // Act
+    await getCategories();
+
+    // Assert
+    expect(fetch).toHaveBeenCalledWith(expect.stringMatching(/\/categories$/));
+  });
+
+  // TC-categories-api-007: getCategories ignores falsy page/limit
+  it('TC-categories-api-007 - getCategories skips page/limit when zero', async () => {
+    // Arrange
+    const sample = { data: [], total: 0, page: 0, limit: 0 };
+    (globalThis as any).fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => sample });
+
+    // Act
+    await getCategories({ page: 0, limit: 0, sort: 'name' });
+
+    // Assert
+    expect(fetch).toHaveBeenCalledWith(expect.stringContaining('/categories?sort=name'));
+    expect(fetch).not.toHaveBeenCalledWith(expect.stringContaining('page=0'));
+    expect(fetch).not.toHaveBeenCalledWith(expect.stringContaining('limit=0'));
+  });
+
+  // TC-categories-api-008: getCategory throws backend error body
+  it('TC-categories-api-008 - getCategory throws backend error body', async () => {
+    // Arrange
+    (globalThis as any).fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      text: async () => 'not found',
+    });
+
+    // Act + Assert
+    await expect(getCategory(999)).rejects.toThrow(/not found/);
+  });
 });

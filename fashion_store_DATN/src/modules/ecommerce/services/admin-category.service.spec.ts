@@ -1,11 +1,22 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { AdminCategoryService } from './admin-category.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { AdminCategoryService } from './admin-category.service';
 import { Category } from '../entities/category.entity';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 
 describe('AdminCategoryService', () => {
   let service: AdminCategoryService;
-  const mockRepo: any = { findOne: jest.fn(), create: jest.fn(), save: jest.fn(), remove: jest.fn() };
+  // Mock repository để kiểm tra các nhánh nghiệp vụ mà không cần DB thật.
+  const mockRepo: any = {
+    findOne: jest.fn(),
+    create: jest.fn(),
+    save: jest.fn(),
+    remove: jest.fn(),
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -21,156 +32,237 @@ describe('AdminCategoryService', () => {
   afterEach(() => jest.clearAllMocks());
 
   it('TC-ADMIN-CATEGORY-SERVICE-001 - create saves when name unique', async () => {
-    // TC-ADMIN-CATEGORY-SERVICE-001: create saves when name unique
-    // Arrange: setup mock data / input
-    // CheckDB: mocked - no DB touch
-    // Act: call function
-    // Assert: verify output and behavior
-    // Rollback: mocked - nothing to rollback
-    // Arrange
+    // Arrange: không có category trùng tên nên cho phép tạo mới.
     mockRepo.findOne.mockResolvedValue(undefined);
-    mockRepo.create.mockReturnValue({ name: 'c' });
-    mockRepo.save.mockResolvedValue({ id: 2, name: 'c' });
+    mockRepo.create.mockReturnValue({ name: 'new-category' });
+    mockRepo.save.mockResolvedValue({ id: 1, name: 'new-category' });
+
     // Act
-    const res = await service.create({ name: 'c' } as any);
-    // Assert
-    expect(mockRepo.findOne).toHaveBeenCalledWith({ where: { name: 'c' } });
-    expect(res).toEqual({ id: 2, name: 'c' });
+    const result = await service.create({ name: 'new-category' } as any);
+
+    // Assert: save phải được gọi và trả đúng entity đã lưu.
+    expect(mockRepo.findOne).toHaveBeenCalledWith({
+      where: { name: 'new-category' },
+    });
+    expect(mockRepo.create).toHaveBeenCalledWith({
+      name: 'new-category',
+      description: undefined,
+      parent: null,
+    });
+    expect(mockRepo.save).toHaveBeenCalledWith({ name: 'new-category' });
+    expect(result).toEqual({ id: 1, name: 'new-category' });
   });
 
   it('TC-ADMIN-CATEGORY-SERVICE-002 - create throws when duplicate name', async () => {
-    // TC-ADMIN-CATEGORY-SERVICE-002: create throws when duplicate name
-    // Arrange: setup mock data / input
-    // CheckDB: mocked - no DB touch
-    // Act: call function
-    // Assert: verify output and behavior
-    // Rollback: mocked - nothing to rollback
-    // Arrange
+    // Arrange: đã tồn tại category cùng tên.
     mockRepo.findOne.mockResolvedValue({ id: 9 });
-    // Act & Assert
-    await expect(service.create({ name: 'c' } as any)).rejects.toThrow();
+
+    // Act + Assert: phải chặn tạo trùng bằng ConflictException.
+    await expect(service.create({ name: 'dup' } as any)).rejects.toBeInstanceOf(
+      ConflictException,
+    );
+    expect(mockRepo.findOne).toHaveBeenCalledWith({
+      where: { name: 'dup' },
+    });
+    expect(mockRepo.create).not.toHaveBeenCalled();
+    expect(mockRepo.save).not.toHaveBeenCalled();
   });
 
-  it('TC-ADMIN-CATEGORY-SERVICE-003 - delete throws when has products', async () => {
-    // TC-ADMIN-CATEGORY-SERVICE-003: delete throws when has products
-    // Arrange: setup mock data / input
-    // CheckDB: mocked - no DB touch
-    // Act: call function
-    // Assert: verify output and behavior
-    // Rollback: mocked - nothing to rollback
+  it('TC-ADMIN-CATEGORY-SERVICE-003 - create throws when parent not found', async () => {
     // Arrange
-    mockRepo.findOne.mockResolvedValue({ id: 3, products: [1] });
-    // Act & Assert
-    await expect(service.delete(3)).rejects.toThrow();
+    mockRepo.findOne.mockResolvedValueOnce(undefined);
+    mockRepo.findOne.mockResolvedValueOnce(undefined);
+
+    // Act + Assert
+    await expect(
+      service.create({ name: 'child', parentId: 999 } as any),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(mockRepo.findOne).toHaveBeenNthCalledWith(1, {
+      where: { name: 'child' },
+    });
+    expect(mockRepo.findOne).toHaveBeenNthCalledWith(2, {
+      where: { id: 999 },
+    });
+    expect(mockRepo.save).not.toHaveBeenCalled();
   });
 
-  it('TC-ADMIN-CATEGORY-SERVICE-004 - delete succeeds when no products', async () => {
-    // TC-ADMIN-CATEGORY-SERVICE-004: delete succeeds when no products in category
-    // Arrange: setup mock category without products
-    // CheckDB: mocked - no DB touch
-    // Act: call function
-    // Assert: verify remove is called and function resolves void
-    // Rollback: mocked - nothing to rollback
-    mockRepo.findOne.mockResolvedValue({ id: 4, products: [] });
-    mockRepo.remove.mockResolvedValue({ id: 4 });
+  it('TC-ADMIN-CATEGORY-SERVICE-004 - create sets parent when valid parentId provided', async () => {
+    // Arrange
+    const parent = { id: 2 };
+    mockRepo.findOne.mockResolvedValueOnce(undefined);
+    mockRepo.findOne.mockResolvedValueOnce(parent);
+    mockRepo.create.mockReturnValue({ name: 'child', parent });
+    mockRepo.save.mockResolvedValue({ id: 10, name: 'child' });
 
-    const res = await service.delete(4);
-    expect(mockRepo.findOne).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 4 } }));
-    expect(mockRepo.remove).toHaveBeenCalledWith(expect.objectContaining({ id: 4 }));
-    expect(res).toBeUndefined();
+    // Act
+    const result = await service.create({ name: 'child', parentId: 2 } as any);
+
+    // Assert
+    expect(mockRepo.create).toHaveBeenCalledWith({
+      name: 'child',
+      description: undefined,
+      parent,
+    });
+    expect(mockRepo.save).toHaveBeenCalledWith({ name: 'child', parent });
+    expect(result).toEqual({ id: 10, name: 'child' });
   });
 
-  it('TC-ADMIN-CATEGORY-SERVICE-005 - create propagates save errors', async () => {
-    // TC-ADMIN-CATEGORY-SERVICE-005: create should propagate errors from save
+  it('TC-ADMIN-CATEGORY-SERVICE-005 - create rejects when name missing or empty', async () => {
+    // Arrange
     mockRepo.findOne.mockResolvedValue(undefined);
-    mockRepo.create.mockReturnValue({ name: 'z' });
-    mockRepo.save.mockRejectedValue(new Error('save fail'));
 
-    await expect(service.create({ name: 'z' } as any)).rejects.toThrow('save fail');
-  });
-
-  it('TC-ADMIN-CATEGORY-SERVICE-006 - update throws when category not found', async () => {
-    // TC-ADMIN-CATEGORY-SERVICE-006: update throws when category to update not found
-    mockRepo.findOne.mockResolvedValue(undefined);
-    await expect(service.update({ id: 99 } as any)).rejects.toThrow();
-  });
-
-  it('TC-ADMIN-CATEGORY-SERVICE-007 - update throws when parent not found', async () => {
-    // TC-ADMIN-CATEGORY-SERVICE-007: update should throw when parentId provided but parent missing
-    const existing = { id: 10, name: 'abc', parent: null } as any;
-    mockRepo.findOne.mockResolvedValueOnce(existing).mockResolvedValueOnce(undefined);
-    await expect(service.update({ id: 10, parentId: 999 } as any)).rejects.toThrow();
-  });
-
-  it('TC-ADMIN-CATEGORY-SERVICE-008 - update propagates save errors', async () => {
-    // TC-ADMIN-CATEGORY-SERVICE-008: update should propagate repository save errors
-    const existing = { id: 12, name: 'a', parent: null } as any;
-    mockRepo.findOne.mockResolvedValue(existing);
-    mockRepo.save.mockRejectedValue(new Error('save fail'));
-    await expect(service.update({ id: 12, name: 'new' } as any)).rejects.toThrow('save fail');
-  });
-
-  it('TC-ADMIN-CATEGORY-SERVICE-009 - create resolves parent when parentId provided', async () => {
-    // TC-ADMIN-CATEGORY-SERVICE-009: create sets parent when parentId exists
-    // Arrange: mock unique name and existing parent category
-    // CheckDB: mocked - no DB touch
-    // Act: call function
-    // Assert: verify parent passed into create payload
-    // Rollback: mocked - nothing to rollback
-    const parent = { id: 7 } as any;
-    mockRepo.findOne
-      .mockResolvedValueOnce(undefined) // check duplicate name
-      .mockResolvedValueOnce(parent); // find parent by id
-    mockRepo.create.mockImplementation((payload: any) => payload);
-    mockRepo.save.mockImplementation(async (payload: any) => ({ id: 8, ...payload }));
-
-    const res = await service.create({ name: 'child', parentId: 7 } as any);
-
-    expect(mockRepo.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        name: 'child',
-        parent,
-      }),
+    // Act + Assert
+    await expect(service.create({} as any)).rejects.toBeInstanceOf(
+      BadRequestException,
     );
-    expect(res).toEqual(expect.objectContaining({ id: 8, parent }));
+    await expect(service.create({ name: '' } as any)).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
   });
 
-  it('TC-ADMIN-CATEGORY-SERVICE-010 - update saves changed fields and parent', async () => {
-    // TC-ADMIN-CATEGORY-SERVICE-010: update merges dto and saves entity
-    // Arrange: mock existing category and new parent category
-    // CheckDB: mocked - no DB touch
-    // Act: call function
-    // Assert: verify save called with merged name/description/parent
-    // Rollback: mocked - nothing to rollback
-    const existing = { id: 20, name: 'old', description: 'old-d', parent: null } as any;
-    const newParent = { id: 21 } as any;
-    mockRepo.findOne
-      .mockResolvedValueOnce(existing)
-      .mockResolvedValueOnce(newParent);
-    mockRepo.save.mockImplementation(async (payload: any) => payload);
+  it('TC-ADMIN-CATEGORY-SERVICE-006 - create rejects when name has wrong type', async () => {
+    // Arrange
+    mockRepo.findOne.mockResolvedValue(undefined);
 
-    const res = await service.update({
-      id: 20,
-      name: 'new',
-      description: 'new-d',
-      parentId: 21,
-    } as any);
+    // Act + Assert
+    await expect(
+      service.create({ name: 123 } as any),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
 
+  it('TC-ADMIN-CATEGORY-SERVICE-007 - update throws when category not found', async () => {
+    // Arrange: id cần update không tồn tại.
+    mockRepo.findOne.mockResolvedValue(undefined);
+
+    // Act + Assert
+    await expect(service.update({ id: 99 } as any)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    expect(mockRepo.findOne).toHaveBeenCalledWith({
+      where: { id: 99 },
+      relations: ['parent', 'children', 'products'],
+    });
+  });
+
+  it('TC-ADMIN-CATEGORY-SERVICE-008 - update throws when parent not found', async () => {
+    // Arrange
+    mockRepo.findOne.mockResolvedValueOnce({ id: 1, parent: null });
+    mockRepo.findOne.mockResolvedValueOnce(undefined);
+
+    // Act + Assert
+    await expect(
+      service.update({ id: 1, parentId: 999 } as any),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(mockRepo.findOne).toHaveBeenNthCalledWith(1, {
+      where: { id: 1 },
+      relations: ['parent', 'children', 'products'],
+    });
+    expect(mockRepo.findOne).toHaveBeenNthCalledWith(2, {
+      where: { id: 999 },
+    });
+    expect(mockRepo.save).not.toHaveBeenCalled();
+  });
+
+  it('TC-ADMIN-CATEGORY-SERVICE-009 - update sets parent when valid parentId provided', async () => {
+    // Arrange
+    const parent = { id: 2 };
+    const category = { id: 1, parent: null, name: 'Old' } as any;
+    mockRepo.findOne.mockResolvedValueOnce(category);
+    mockRepo.findOne.mockResolvedValueOnce(parent);
+    mockRepo.save.mockResolvedValue({ id: 1 });
+
+    // Act
+    await service.update({ id: 1, parentId: 2 } as any);
+
+    // Assert
     expect(mockRepo.save).toHaveBeenCalledWith(
-      expect.objectContaining({
-        id: 20,
-        name: 'new',
-        description: 'new-d',
-        parent: newParent,
-      }),
+      expect.objectContaining({ parent }),
     );
-    expect(res).toEqual(
-      expect.objectContaining({
-        id: 20,
-        name: 'new',
-        description: 'new-d',
-        parent: newParent,
-      }),
+  });
+
+  it('TC-ADMIN-CATEGORY-SERVICE-010 - update merges fields and keeps old values', async () => {
+    // Arrange
+    const category = {
+      id: 1,
+      name: 'Old',
+      description: 'Old desc',
+      parent: null,
+    } as any;
+    mockRepo.findOne.mockResolvedValue(category);
+    mockRepo.save.mockResolvedValue({ id: 1 });
+
+    // Act
+    await service.update({ id: 1, name: 'New' } as any);
+
+    // Assert
+    expect(mockRepo.save).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'New', description: 'Old desc' }),
     );
+  });
+
+  it('TC-ADMIN-CATEGORY-SERVICE-011 - update does not overwrite fields with undefined', async () => {
+    // Arrange
+    const category = {
+      id: 1,
+      name: 'Old',
+      description: 'Old desc',
+      parent: null,
+    } as any;
+    mockRepo.findOne.mockResolvedValue(category);
+    mockRepo.save.mockResolvedValue({ id: 1 });
+
+    // Act
+    await service.update({ id: 1, name: undefined } as any);
+
+    // Assert
+    expect(mockRepo.save).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'Old', description: 'Old desc' }),
+    );
+  });
+
+  it('TC-ADMIN-CATEGORY-SERVICE-012 - update rejects when name has wrong type', async () => {
+    // Arrange
+    const category = { id: 1, name: 'Old', description: 'Old desc' } as any;
+    mockRepo.findOne.mockResolvedValue(category);
+
+    // Act + Assert
+    await expect(
+      service.update({ id: 1, name: 123 } as any),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('TC-ADMIN-CATEGORY-SERVICE-013 - delete throws when category not found', async () => {
+    // Arrange
+    mockRepo.findOne.mockResolvedValue(undefined);
+
+    // Act + Assert
+    await expect(service.delete(4)).rejects.toBeInstanceOf(NotFoundException);
+    expect(mockRepo.findOne).toHaveBeenCalledWith({
+      where: { id: 4 },
+      relations: ['products'],
+    });
+    expect(mockRepo.remove).not.toHaveBeenCalled();
+  });
+
+  it('TC-ADMIN-CATEGORY-SERVICE-014 - delete throws when has products', async () => {
+    // Arrange: category còn liên kết product nên không được xóa.
+    mockRepo.findOne.mockResolvedValue({ id: 4, products: [{ id: 1 }] });
+
+    // Act + Assert
+    await expect(service.delete(4)).rejects.toBeInstanceOf(ConflictException);
+    expect(mockRepo.remove).not.toHaveBeenCalled();
+  });
+
+  it('TC-ADMIN-CATEGORY-SERVICE-015 - delete succeeds when no products', async () => {
+    // Arrange: category hợp lệ và không còn product liên quan.
+    const category = { id: 4, products: [] };
+    mockRepo.findOne.mockResolvedValue(category);
+    mockRepo.remove.mockResolvedValue(category);
+
+    // Act
+    await service.delete(4);
+
+    // Assert: gọi remove với đúng entity tìm được.
+    expect(mockRepo.remove).toHaveBeenCalledWith(category);
   });
 });

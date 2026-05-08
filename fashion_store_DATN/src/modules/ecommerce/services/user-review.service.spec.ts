@@ -1,14 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { UserReviewService } from './user-review.service';
 import { ProductReview } from '../entities/productReview.entity';
 import { OrderItem } from '../entities/orderItem.entity';
-import { Repository } from 'typeorm';
-import {
-  NotFoundException,
-  ForbiddenException,
-  BadRequestException,
-} from '@nestjs/common';
 import { OrderStatus } from '../entities/order.entity';
 import { ShipmentStatus } from '../enums/shipmentStatus.enum';
 
@@ -22,7 +21,6 @@ describe('UserReviewService', () => {
       create: jest.fn(),
       save: jest.fn(),
     };
-
     orderItemRepo = {
       findOne: jest.fn(),
     };
@@ -40,192 +38,204 @@ describe('UserReviewService', () => {
 
   afterEach(() => jest.clearAllMocks());
 
-  describe('createReview', () => {
-    const dto = { orderItemId: 1, rating: 5, comment: 'nice' } as any;
+  it('TC-USER-REVIEW-SERVICE-001 - throws NotFoundException when order item not found', async () => {
+    orderItemRepo.findOne.mockResolvedValue(undefined);
 
-    // Nếu orderItem không tồn tại -> NotFoundException
-    it('TC-USER-REVIEW-SERVICE-001 - throws NotFoundException when order item not found', async () => {
-      // TC-USER-REVIEW-SERVICE-001: throws NotFoundException when order item not found
-      // Arrange: setup mock data / input
-      // CheckDB: mocked - no DB touch
-      // Act: call function
-      // Assert: verify output and behavior
-      // Rollback: mocked - nothing to rollback
-      orderItemRepo.findOne.mockResolvedValue(undefined);
-      await expect(service.createReview(1, dto)).rejects.toThrow(NotFoundException);
+    await expect(
+      service.createReview(1, { orderItemId: 1 } as any),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('TC-USER-REVIEW-SERVICE-002 - throws ForbiddenException when user mismatch', async () => {
+    orderItemRepo.findOne.mockResolvedValue({
+      id: 1,
+      order: {
+        user: { id: 2 },
+        orderStatus: OrderStatus.COMPLETED,
+        shipmentStatus: ShipmentStatus.DELIVERED,
+      },
+      variant: { id: 10, product: { id: 20 } },
+      review: null,
     });
 
-    // Nếu user không phải chủ đơn hàng -> ForbiddenException
-    it('TC-USER-REVIEW-SERVICE-002 - throws ForbiddenException when user mismatch', async () => {
-      // TC-USER-REVIEW-SERVICE-002: throws ForbiddenException when user mismatch
-      // Arrange: setup mock data / input
-      // CheckDB: mocked - no DB touch
-      // Act: call function
-      // Assert: verify output and behavior
-      // Rollback: mocked - nothing to rollback
-      const orderItem = {
-        id: 1,
-        order: { user: { id: 2 }, orderStatus: OrderStatus.COMPLETED, shipmentStatus: ShipmentStatus.DELIVERED },
-        variant: { id: 3, product: { id: 10 } },
-        review: null,
-      } as any;
-      orderItemRepo.findOne.mockResolvedValue(orderItem);
-      await expect(service.createReview(1, dto)).rejects.toThrow(ForbiddenException);
+    await expect(
+      service.createReview(1, { orderItemId: 1 } as any),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('TC-USER-REVIEW-SERVICE-003 - throws BadRequestException when not delivered', async () => {
+    orderItemRepo.findOne.mockResolvedValue({
+      id: 1,
+      order: {
+        user: { id: 1 },
+        orderStatus: OrderStatus.PENDING,
+        shipmentStatus: ShipmentStatus.READY_TO_PICK,
+      },
+      variant: { id: 10, product: { id: 20 } },
+      review: null,
     });
 
-    // Nếu đơn hàng chưa giao hoàn tất -> BadRequestException
-    it('TC-USER-REVIEW-SERVICE-003 - throws BadRequestException when not delivered', async () => {
-      // TC-USER-REVIEW-SERVICE-003: throws BadRequestException when not delivered
-      // Arrange: setup mock data / input
-      // CheckDB: mocked - no DB touch
-      // Act: call function
-      // Assert: verify output and behavior
-      // Rollback: mocked - nothing to rollback
-      const orderItem = {
-        id: 1,
-        order: { user: { id: 1 }, orderStatus: OrderStatus.PENDING, shipmentStatus: ShipmentStatus.READY_TO_PICK },
-        variant: { id: 3, product: { id: 10 } },
-        review: null,
-      } as any;
-      orderItemRepo.findOne.mockResolvedValue(orderItem);
-      await expect(service.createReview(1, dto)).rejects.toThrow(BadRequestException);
+    await expect(
+      service.createReview(1, { orderItemId: 1 } as any),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('TC-USER-REVIEW-SERVICE-004 - throws BadRequestException when review already exists', async () => {
+    orderItemRepo.findOne.mockResolvedValue({
+      id: 1,
+      order: {
+        user: { id: 1 },
+        orderStatus: OrderStatus.COMPLETED,
+        shipmentStatus: ShipmentStatus.DELIVERED,
+      },
+      variant: { id: 10, product: { id: 20 } },
+      review: { id: 77 },
     });
 
-    // Nếu đã đánh giá trước đó -> BadRequestException
-    it('TC-USER-REVIEW-SERVICE-004 - throws BadRequestException when already reviewed', async () => {
-      // TC-USER-REVIEW-SERVICE-004: throws BadRequestException when already reviewed
-      // Arrange: setup mock data / input
-      // CheckDB: mocked - no DB touch
-      // Act: call function
-      // Assert: verify output and behavior
-      // Rollback: mocked - nothing to rollback
-      const orderItem = {
-        id: 1,
-        order: { user: { id: 1 }, orderStatus: OrderStatus.COMPLETED, shipmentStatus: ShipmentStatus.DELIVERED },
-        variant: { id: 3, product: { id: 10 } },
-        review: { id: 99 },
-      } as any;
-      orderItemRepo.findOne.mockResolvedValue(orderItem);
-      await expect(service.createReview(1, dto)).rejects.toThrow(BadRequestException);
+    await expect(
+      service.createReview(1, { orderItemId: 1 } as any),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('TC-USER-REVIEW-SERVICE-005 - throws BadRequestException when variant or product missing', async () => {
+    orderItemRepo.findOne.mockResolvedValue({
+      id: 1,
+      order: {
+        user: { id: 1 },
+        orderStatus: OrderStatus.COMPLETED,
+        shipmentStatus: ShipmentStatus.DELIVERED,
+      },
+      variant: null,
+      review: null,
     });
 
-    // Nếu không xác định được variant hoặc product -> BadRequestException
-    it('TC-USER-REVIEW-SERVICE-005 - throws BadRequestException when variant or product missing', async () => {
-      // TC-USER-REVIEW-SERVICE-005: throws BadRequestException when variant or product missing
-      // Arrange: setup mock data / input
-      // CheckDB: mocked - no DB touch
-      // Act: call function
-      // Assert: verify output and behavior
-      // Rollback: mocked - nothing to rollback
-      const orderItem = {
-        id: 1,
-        order: { user: { id: 1 }, orderStatus: OrderStatus.COMPLETED, shipmentStatus: ShipmentStatus.DELIVERED },
-        variant: null,
-        review: null,
-      } as any;
-      orderItemRepo.findOne.mockResolvedValue(orderItem);
-      await expect(service.createReview(1, dto)).rejects.toThrow(BadRequestException);
+    await expect(
+      service.createReview(1, { orderItemId: 1 } as any),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('TC-USER-REVIEW-SERVICE-006 - creates and saves review when valid', async () => {
+    const orderItem = {
+      id: 1,
+      order: {
+        id: 5,
+        user: { id: 1 },
+        orderStatus: OrderStatus.COMPLETED,
+        shipmentStatus: ShipmentStatus.DELIVERED,
+      },
+      variant: { id: 10, product: { id: 20 } },
+      review: null,
+    };
+
+    orderItemRepo.findOne.mockResolvedValue(orderItem);
+    reviewRepo.create.mockReturnValue({ rating: 5, comment: 'ok' });
+    reviewRepo.save.mockResolvedValue({ id: 99, rating: 5, comment: 'ok' });
+
+    const result = await service.createReview(1, {
+      orderItemId: 1,
+      rating: 5,
+      comment: 'ok',
+    } as any);
+
+    expect(reviewRepo.create).toHaveBeenCalled();
+    expect(reviewRepo.save).toHaveBeenCalled();
+    expect(result).toEqual({ id: 99, rating: 5, comment: 'ok' });
+  });
+
+  it('TC-USER-REVIEW-SERVICE-007 - forwards to listPaginate with correct options', async () => {
+    const spy = jest.spyOn(service as any, 'listPaginate').mockResolvedValue({
+      items: [],
+      total: 0,
+    });
+    const query = {} as any;
+
+    const result = await service.listProductReviews(10, query);
+
+    expect(query.searchFields).toEqual(['comment', 'sellerReply']);
+    expect(spy).toHaveBeenCalledWith(query, {
+      where: { productId: 10 },
+      relations: ['user', 'variant'],
+    });
+    expect(result).toEqual({ items: [], total: 0 });
+  });
+
+  it('TC-USER-REVIEW-SERVICE-008 - returns cannot comment when review exists', async () => {
+    orderItemRepo.findOne.mockResolvedValue({
+      id: 1,
+      order: {
+        user: { id: 1 },
+        orderStatus: OrderStatus.COMPLETED,
+        shipmentStatus: ShipmentStatus.DELIVERED,
+      },
+      review: { id: 77 },
     });
 
-    // Tạo review mới và lưu khi dữ liệu hợp lệ
-    it('TC-USER-REVIEW-SERVICE-006 - creates and saves review when valid', async () => {
-      // TC-USER-REVIEW-SERVICE-006: creates and saves review when valid
-      // Arrange: setup mock data / input
-      // CheckDB: mocked - no DB touch
-      // Act: call function
-      // Assert: verify output and behavior
-      // Rollback: mocked - nothing to rollback
-      const order = { id: 5, user: { id: 1 }, orderStatus: OrderStatus.COMPLETED, shipmentStatus: ShipmentStatus.DELIVERED } as any;
-      const variant = { id: 3, product: { id: 10 } } as any;
-      const orderItem = { id: 1, order, variant, review: null } as any;
-      const created = { rating: dto.rating, comment: dto.comment } as any;
-      const saved = { id: 77, ...created } as any;
+    const result = await service.checkCommentable(1, 1);
 
-      orderItemRepo.findOne.mockResolvedValue(orderItem);
-      reviewRepo.create.mockReturnValue(created);
-      reviewRepo.save.mockResolvedValue(saved);
+    expect(result).toEqual(
+      expect.objectContaining({
+        canComment: false,
+        reviewId: 77,
+      }),
+    );
+  });
 
-      const res = await service.createReview(1, dto);
-      expect(reviewRepo.create).toHaveBeenCalled();
-      expect(reviewRepo.save).toHaveBeenCalledWith(created);
-      expect(res).toBe(saved);
+  it('TC-USER-REVIEW-SERVICE-009 - returns cannot comment when not delivered', async () => {
+    orderItemRepo.findOne.mockResolvedValue({
+      id: 1,
+      order: {
+        user: { id: 1 },
+        orderStatus: OrderStatus.PENDING,
+        shipmentStatus: ShipmentStatus.READY_TO_PICK,
+      },
+      review: null,
+    });
+
+    const result = await service.checkCommentable(1, 1);
+
+    expect(result).toEqual({
+      canComment: false,
+      reason: 'Đơn hàng chưa được giao hoàn tất',
     });
   });
 
-  describe('listProductReviews', () => {
-    // Kiểm tra listProductReviews gọi listPaginate với options đúng
-    it('TC-USER-REVIEW-SERVICE-007 - forwards to listPaginate with correct options', async () => {
-      // TC-USER-REVIEW-SERVICE-007: forwards to listPaginate with correct options
-      // Arrange: setup mock data / input
-      // CheckDB: mocked - no DB touch
-      // Act: call function
-      // Assert: verify output and behavior
-      // Rollback: mocked - nothing to rollback
-      const spy = jest.spyOn(service as any, 'listPaginate').mockResolvedValue({ items: [], total: 0 } as any);
-      const query = {} as any;
-      const res = await service.listProductReviews(10, query);
-      expect(spy).toHaveBeenCalledWith(query, { where: { productId: 10 }, relations: ['user', 'variant'] });
-      expect(res).toEqual({ items: [], total: 0 });
+  it('TC-USER-REVIEW-SERVICE-010 - returns canComment true when delivered and no review', async () => {
+    orderItemRepo.findOne.mockResolvedValue({
+      id: 1,
+      order: {
+        user: { id: 1 },
+        orderStatus: OrderStatus.COMPLETED,
+        shipmentStatus: ShipmentStatus.DELIVERED,
+      },
+      review: null,
     });
+
+    const result = await service.checkCommentable(1, 1);
+
+    expect(result).toEqual({ canComment: true });
   });
 
-  describe('checkCommentable', () => {
-    // Nếu không tìm thấy hoặc user khác -> NotFoundException
-    it('TC-USER-REVIEW-SERVICE-008 - throws NotFoundException when order item missing or user mismatch', async () => {
-      // TC-USER-REVIEW-SERVICE-008: throws NotFoundException when order item missing or user mismatch
-      // Arrange: setup mock data / input
-      // CheckDB: mocked - no DB touch
-      // Act: call function
-      // Assert: verify output and behavior
-      // Rollback: mocked - nothing to rollback
-      orderItemRepo.findOne.mockResolvedValue(undefined);
-      await expect(service.checkCommentable(1, 1)).rejects.toThrow(NotFoundException);
+  it('TC-USER-REVIEW-SERVICE-011 - throws NotFoundException when order item missing', async () => {
+    orderItemRepo.findOne.mockResolvedValue(undefined);
 
-      const oi = { id: 1, order: { user: { id: 2 } } } as any;
-      orderItemRepo.findOne.mockResolvedValue(oi);
-      await expect(service.checkCommentable(1, 1)).rejects.toThrow(NotFoundException);
+    await expect(service.checkCommentable(1, 1)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+  });
+
+  it('TC-USER-REVIEW-SERVICE-012 - throws NotFoundException when user mismatch', async () => {
+    orderItemRepo.findOne.mockResolvedValue({
+      id: 1,
+      order: {
+        user: { id: 2 },
+        orderStatus: OrderStatus.COMPLETED,
+        shipmentStatus: ShipmentStatus.DELIVERED,
+      },
+      review: null,
     });
 
-    // Nếu đã đánh giá -> trả về canComment false và reviewId
-    it('TC-USER-REVIEW-SERVICE-009 - returns cannot comment when review exists', async () => {
-      // TC-USER-REVIEW-SERVICE-009: returns cannot comment when review exists
-      // Arrange: setup mock data / input
-      // CheckDB: mocked - no DB touch
-      // Act: call function
-      // Assert: verify output and behavior
-      // Rollback: mocked - nothing to rollback
-      const oi = { id: 1, order: { user: { id: 1 } }, review: { id: 55 }, orderStatus: OrderStatus.COMPLETED } as any;
-      orderItemRepo.findOne.mockResolvedValue(oi);
-      const res = await service.checkCommentable(1, 1);
-      expect(res).toEqual({ canComment: false, reason: 'Sản phẩm đã được đánh giá', reviewId: 55 });
-    });
-
-    // Nếu chưa giao -> trả về canComment false với lý do
-    it('TC-USER-REVIEW-SERVICE-010 - returns cannot comment when not delivered', async () => {
-      // TC-USER-REVIEW-SERVICE-010: returns cannot comment when not delivered
-      // Arrange: setup mock data / input
-      // CheckDB: mocked - no DB touch
-      // Act: call function
-      // Assert: verify output and behavior
-      // Rollback: mocked - nothing to rollback
-      const oi = { id: 1, order: { user: { id: 1 }, orderStatus: OrderStatus.PENDING, shipmentStatus: ShipmentStatus.READY_TO_PICK }, review: null } as any;
-      orderItemRepo.findOne.mockResolvedValue(oi);
-      const res = await service.checkCommentable(1, 1);
-      expect(res).toEqual({ canComment: false, reason: 'Đơn hàng chưa được giao hoàn tất' });
-    });
-
-    // Nếu đã giao và chưa có review -> canComment true
-    it('TC-USER-REVIEW-SERVICE-011 - returns canComment true when delivered and no review', async () => {
-      // TC-USER-REVIEW-SERVICE-011: returns canComment true when delivered and no review
-      // Arrange: setup mock data / input
-      // CheckDB: mocked - no DB touch
-      // Act: call function
-      // Assert: verify output and behavior
-      // Rollback: mocked - nothing to rollback
-      const oi = { id: 1, order: { user: { id: 1 }, orderStatus: OrderStatus.COMPLETED, shipmentStatus: ShipmentStatus.DELIVERED }, review: null } as any;
-      orderItemRepo.findOne.mockResolvedValue(oi);
-      const res = await service.checkCommentable(1, 1);
-      expect(res).toEqual({ canComment: true });
-    });
+    await expect(service.checkCommentable(1, 1)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
   });
 });

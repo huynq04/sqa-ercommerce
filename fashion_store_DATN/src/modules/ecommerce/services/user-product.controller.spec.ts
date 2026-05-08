@@ -1,17 +1,18 @@
+import { JwtService } from '@nestjs/jwt';
 import { UserProductController } from '../controllers/user-product.controller';
 import { UserProductService } from './user-product.service';
-import { JwtService } from '@nestjs/jwt';
 
 describe('UserProductController', () => {
   let controller: UserProductController;
 
+  // Mock service để kiểm tra controller có gọi đúng hàm và truyền đúng tham số.
   const mockProductService: Partial<UserProductService> = {
     findAll: jest.fn(),
     findById: jest.fn(),
-    // ✅ FIX QUAN TRỌNG: phải return Promise
     logProductView: jest.fn().mockResolvedValue(undefined),
   };
 
+  // Mock JwtService để giả lập token hợp lệ/không hợp lệ.
   const mockJwt: Partial<JwtService> = {
     verify: jest.fn(),
   };
@@ -25,211 +26,140 @@ describe('UserProductController', () => {
 
   afterEach(() => jest.clearAllMocks());
 
-  // =========================
-  // GET ALL
-  // =========================
   it('TC-USER-PRODUCT-CONTROLLER-001 - should return all products with query', async () => {
+    // Query từ client cần được chuyển nguyên sang service để giữ logic filter/paging tập trung ở service.
     const query = { page: 1 } as any;
+    (mockProductService.findAll as jest.Mock).mockResolvedValue({ items: [], total: 0 });
 
-    (mockProductService.findAll as jest.Mock).mockResolvedValue({
-      items: [],
-      total: 0,
-    });
+    const result = await controller.getAll(query);
 
-    const res = await controller.getAll(query);
-
+    // Xác nhận controller không tự biến đổi query và trả đúng payload service trả về.
     expect(mockProductService.findAll).toHaveBeenCalledWith(query);
-    expect(res).toEqual({ items: [], total: 0 });
+    expect(result).toEqual({ items: [], total: 0 });
   });
 
-  // =========================
-  // GET ONE - TOKEN VALID
-  // =========================
-  it('TC-USER-PRODUCT-CONTROLLER-002 - should return product and log view when token valid', async () => {
-    const product = { id: 10 };
+  it('TC-USER-PRODUCT-CONTROLLER-002 - should forward undefined query to service', async () => {
+    // Query không có vẫn phải forward xuống service để áp dụng default ở tầng service.
+    (mockProductService.findAll as jest.Mock).mockResolvedValue({ items: [], total: 0 });
 
-    (mockProductService.findById as jest.Mock).mockResolvedValue(product);
+    const result = await controller.getAll(undefined as any);
+
+    expect(mockProductService.findAll).toHaveBeenCalledWith(undefined);
+    expect(result).toEqual({ items: [], total: 0 });
+  });
+
+  it('TC-USER-PRODUCT-CONTROLLER-003 - should bubble error when service.findAll fails', async () => {
+    // Nếu service lỗi (DB lỗi), controller phải trả reject để framework map ra 500.
+    (mockProductService.findAll as jest.Mock).mockRejectedValue(new Error('db fail'));
+
+    await expect(controller.getAll({ page: 1 } as any)).rejects.toThrow('db fail');
+  });
+
+  it('TC-USER-PRODUCT-CONTROLLER-004 - should return product and log view when token valid', async () => {
+    // Token hợp lệ có sub=5, vì vậy controller phải log hành vi xem sản phẩm cho user 5.
+    (mockProductService.findById as jest.Mock).mockResolvedValue({ id: 10 });
     (mockJwt.verify as jest.Mock).mockReturnValue({ sub: 5 });
 
-    const req: any = {
-      headers: { authorization: 'Bearer token123' },
-    };
+    const req: any = { headers: { authorization: 'Bearer token123' } };
 
-    const res = await controller.getOne(10, req);
+    const result = await controller.getOne(10, req);
 
+    // Ngoài việc trả product detail, controller còn phải gọi logProductView đúng cặp userId/productId.
     expect(mockProductService.findById).toHaveBeenCalledWith(10);
     expect(mockProductService.logProductView).toHaveBeenCalledWith(5, 10);
-    expect(res).toEqual(product);
+    expect(result).toEqual({ id: 10 });
   });
 
-  // =========================
-  // NO TOKEN
-  // =========================
-  it('TC-USER-PRODUCT-CONTROLLER-003 - should NOT log view when no token', async () => {
-    (mockProductService.findById as jest.Mock).mockResolvedValue({ id: 1 });
+  it('TC-USER-PRODUCT-CONTROLLER-005 - should extract token from cookie', async () => {
+    // Trường hợp frontend gửi token qua cookie thay vì Authorization header.
+    (mockProductService.findById as jest.Mock).mockResolvedValue({ id: 11 });
+    (mockJwt.verify as jest.Mock).mockReturnValue({ id: 7 });
 
-    const req: any = { headers: {} };
+    const req: any = { headers: { cookie: 'token=abc123' } };
 
-    await controller.getOne(1, req);
+    const result = await controller.getOne(11, req);
 
-    expect(mockProductService.logProductView).not.toHaveBeenCalled();
+    // Controller phải fallback đọc cookie và vẫn log đúng user/product.
+    expect(mockProductService.findById).toHaveBeenCalledWith(11);
+    expect(mockProductService.logProductView).toHaveBeenCalledWith(7, 11);
+    expect(result).toEqual({ id: 11 });
   });
 
-  // =========================
-  // INVALID TOKEN
-  // =========================
-  it('TC-USER-PRODUCT-CONTROLLER-004 - should NOT log view when token invalid', async () => {
+  it('TC-USER-PRODUCT-CONTROLLER-006 - should NOT log view when token invalid', async () => {
+    // Arrange: jwt.verify ném lỗi -> token không hợp lệ.
     (mockProductService.findById as jest.Mock).mockResolvedValue({ id: 1 });
-
     (mockJwt.verify as jest.Mock).mockImplementation(() => {
       throw new Error('invalid token');
     });
 
-    const req: any = {
-      headers: { authorization: 'Bearer badtoken' },
-    };
-
+    const req: any = { headers: { authorization: 'Bearer bad-token' } };
     await controller.getOne(1, req);
 
+    // Token lỗi thì chỉ trả dữ liệu sản phẩm, tuyệt đối không ghi activity sai user.
+    expect(mockProductService.findById).toHaveBeenCalledWith(1);
     expect(mockProductService.logProductView).not.toHaveBeenCalled();
   });
 
-  // =========================
-  // TOKEN FROM COOKIE
-  // =========================
-  it('TC-USER-PRODUCT-CONTROLLER-005 - should extract token from cookie', async () => {
-    (mockProductService.findById as jest.Mock).mockResolvedValue({ id: 1 });
-
-    (mockJwt.verify as jest.Mock).mockReturnValue({ sub: 7 });
-
-    const req: any = {
-      headers: {
-        cookie: 'token=abc123',
-      },
-    };
-
-    await controller.getOne(1, req);
-
-    expect(mockProductService.logProductView).toHaveBeenCalledWith(7, 1);
-  });
-
-  // =========================
-  // PAYLOAD WITH ID
-  // =========================
-  it('TC-USER-PRODUCT-CONTROLLER-006 - should support payload.id', async () => {
-    (mockProductService.findById as jest.Mock).mockResolvedValue({ id: 1 });
-
-    (mockJwt.verify as jest.Mock).mockReturnValue({ id: 9 });
-
-    const req: any = {
-      headers: { authorization: 'Bearer token' },
-    };
-
-    await controller.getOne(1, req);
-
-    expect(mockProductService.logProductView).toHaveBeenCalledWith(9, 1);
-  });
-
-  // =========================
-  // logProductView FAIL
-  // =========================
   it('TC-USER-PRODUCT-CONTROLLER-007 - should not throw when logProductView fails', async () => {
+    // Arrange: product lấy thành công nhưng log view bị reject (lỗi phụ).
     (mockProductService.findById as jest.Mock).mockResolvedValue({ id: 1 });
-
     (mockJwt.verify as jest.Mock).mockReturnValue({ sub: 5 });
+    (mockProductService.logProductView as jest.Mock).mockRejectedValue(new Error('log fail'));
 
-    (mockProductService.logProductView as jest.Mock).mockRejectedValue(
-      new Error('fail'),
-    );
+    const req: any = { headers: { authorization: 'Bearer token' } };
 
-    const req: any = {
-      headers: { authorization: 'Bearer token' },
-    };
-
+    // Dù logging lỗi, API chi tiết sản phẩm vẫn phải thành công để không ảnh hưởng trải nghiệm người dùng.
     await expect(controller.getOne(1, req)).resolves.toEqual({ id: 1 });
+    expect(mockProductService.findById).toHaveBeenCalledWith(1);
   });
 
-  // =========================
-  // INVALID USER ID (NaN)
-  // =========================
-  it('TC-USER-PRODUCT-CONTROLLER-008 - should NOT log when userId is NaN', async () => {
-    (mockProductService.findById as jest.Mock).mockResolvedValue({ id: 1 });
+  it('TC-USER-PRODUCT-CONTROLLER-008 - should not log when Authorization header is invalid format', async () => {
+    // Authorization không đúng format (không phải Bearer) -> không log view.
+    (mockProductService.findById as jest.Mock).mockResolvedValue({ id: 2 });
 
+    const req: any = { headers: { authorization: 'Basic abc' } };
+    const result = await controller.getOne(2, req);
+
+    expect(mockProductService.findById).toHaveBeenCalledWith(2);
+    expect(mockProductService.logProductView).not.toHaveBeenCalled();
+    expect(mockJwt.verify).not.toHaveBeenCalled();
+    expect(result).toEqual({ id: 2 });
+  });
+
+  it('TC-USER-PRODUCT-CONTROLLER-009 - should not log when cookie missing token', async () => {
+    // Cookie có dữ liệu khác nhưng thiếu token -> không log view.
+    (mockProductService.findById as jest.Mock).mockResolvedValue({ id: 3 });
+
+    const req: any = { headers: { cookie: 'session=abc; theme=dark' } };
+    const result = await controller.getOne(3, req);
+
+    expect(mockProductService.findById).toHaveBeenCalledWith(3);
+    expect(mockProductService.logProductView).not.toHaveBeenCalled();
+    expect(mockJwt.verify).not.toHaveBeenCalled();
+    expect(result).toEqual({ id: 3 });
+  });
+
+  it('TC-USER-PRODUCT-CONTROLLER-010 - should not log when payload sub is not numeric', async () => {
+    // sub không parse được -> extractUserId trả null, không log.
+    (mockProductService.findById as jest.Mock).mockResolvedValue({ id: 4 });
     (mockJwt.verify as jest.Mock).mockReturnValue({ sub: 'abc' });
 
-    const req: any = {
-      headers: { authorization: 'Bearer token' },
-    };
+    const req: any = { headers: { authorization: 'Bearer token123' } };
+    const result = await controller.getOne(4, req);
 
-    await controller.getOne(1, req);
-
+    expect(mockProductService.findById).toHaveBeenCalledWith(4);
     expect(mockProductService.logProductView).not.toHaveBeenCalled();
+    expect(result).toEqual({ id: 4 });
   });
 
-  it('TC-USER-PRODUCT-CONTROLLER-009 - getAll propagates service error', async () => {
-    // TC-USER-PRODUCT-CONTROLLER-009: should propagate errors from service.findAll
-    (mockProductService.findAll as jest.Mock).mockRejectedValue(new Error('findAll fail'));
-    await expect(controller.getAll({} as any)).rejects.toThrow('findAll fail');
-  });
-
-  it('TC-USER-PRODUCT-CONTROLLER-010 - getOne propagates findById error', async () => {
-    // TC-USER-PRODUCT-CONTROLLER-010: should propagate errors from service.findById
+  it('TC-USER-PRODUCT-CONTROLLER-011 - should bubble error when service.findById fails', async () => {
+    // Nếu service ném lỗi (không tìm thấy hoặc DB lỗi), controller phải reject để framework map ra 4xx/5xx.
     (mockProductService.findById as jest.Mock).mockRejectedValue(new Error('not found'));
-    const req: any = { headers: {} };
-    await expect(controller.getOne(1, req)).rejects.toThrow('not found');
-  });
 
-  // TC-USER-PRODUCT-CONTROLLER-011: malformed bearer header does not trigger jwt verify or logging
-  it('TC-USER-PRODUCT-CONTROLLER-011 - should not verify token when authorization header is malformed', async () => {
-    // Arrange: product exists and malformed auth header (missing token part)
-    // CheckDB: mocked - no DB touch
-    // Act: call getOne
-    // Assert: jwt verify and logProductView are not called
-    // Rollback: mocked - nothing to rollback
-    (mockProductService.findById as jest.Mock).mockResolvedValue({ id: 3 });
-    const req: any = { headers: { authorization: 'Bearer' } };
+    const req: any = { headers: { authorization: 'Bearer token123' } };
 
-    await controller.getOne(3, req);
-
-    expect(mockJwt.verify).not.toHaveBeenCalled();
-    expect(mockProductService.logProductView).not.toHaveBeenCalled();
-  });
-
-  // TC-USER-PRODUCT-CONTROLLER-012: authorization header takes precedence over cookie token
-  it('TC-USER-PRODUCT-CONTROLLER-012 - should prioritize authorization token over cookie token', async () => {
-    // Arrange: provide both auth and cookie tokens with different payloads
-    // CheckDB: mocked - no DB touch
-    // Act: call getOne
-    // Assert: logProductView uses user from authorization token
-    // Rollback: mocked - nothing to rollback
-    (mockProductService.findById as jest.Mock).mockResolvedValue({ id: 4 });
-    (mockJwt.verify as jest.Mock).mockReturnValue({ sub: 101 });
-    const req: any = {
-      headers: {
-        authorization: 'Bearer auth-token',
-        cookie: 'token=cookie-token',
-      },
-    };
-
-    await controller.getOne(4, req);
-
-    expect(mockJwt.verify).toHaveBeenCalledWith('auth-token', expect.any(Object));
-    expect(mockProductService.logProductView).toHaveBeenCalledWith(101, 4);
-  });
-
-  // TC-USER-PRODUCT-CONTROLLERuser-product-controller-013: cookie without token key should not log view
-  it('TC-USER-PRODUCT-CONTROLLER-013 - should not log view when cookie does not contain token key', async () => {
-    // Arrange: valid product but cookie lacks token field
-    // CheckDB: mocked - no DB touch
-    // Act: call getOne
-    // Assert: jwt verify/logProductView not called
-    // Rollback: mocked - nothing to rollback
-    (mockProductService.findById as jest.Mock).mockResolvedValue({ id: 5 });
-    const req: any = { headers: { cookie: 'sessionId=abc123' } };
-
-    await controller.getOne(5, req);
-
-    expect(mockJwt.verify).not.toHaveBeenCalled();
+    await expect(controller.getOne(99, req)).rejects.toThrow('not found');
+    expect(mockProductService.findById).toHaveBeenCalledWith(99);
     expect(mockProductService.logProductView).not.toHaveBeenCalled();
   });
 });

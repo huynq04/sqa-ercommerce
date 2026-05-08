@@ -64,4 +64,56 @@ describe('productsApi', () => {
     expect(res).toEqual(sample);
     expect(fetch).toHaveBeenCalledWith(expect.stringContaining('/products/7'));
   });
+
+  // TC-products-api-005: getProducts throws on non-ok
+  it('TC-products-api-005 - getProducts throws on non-ok', async () => {
+    // Arrange
+    (globalThis as any).fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      text: async () => 'bad request',
+    });
+
+    // Act + Assert
+    await expect(getProducts()).rejects.toThrow(/bad request/);
+  });
+
+  // TC-products-api-006: getProducts omits query when params not provided
+  it('TC-products-api-006 - getProducts calls base endpoint without query', async () => {
+    // Arrange
+    const sample = { data: [], total: 0, page: 1, limit: 10 };
+    (globalThis as any).fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => sample });
+
+    // Act
+    await getProducts();
+
+    // Assert
+    expect(fetch).toHaveBeenCalledWith(expect.stringMatching(/\/products$/));
+  });
+
+  // TC-products-api-007: getProducts ignores falsy page/limit
+  it('TC-products-api-007 - getProducts skips page/limit when zero', async () => {
+    // Arrange
+    const sample = { data: [], total: 0, page: 0, limit: 0 };
+    (globalThis as any).fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => sample });
+
+    // Act
+    await getProducts({ page: 0, limit: 0, sort: 'name' });
+
+    // Assert
+    expect(fetch).toHaveBeenCalledWith(expect.stringContaining('/products?sort=name'));
+    expect(fetch).not.toHaveBeenCalledWith(expect.stringContaining('page=0'));
+    expect(fetch).not.toHaveBeenCalledWith(expect.stringContaining('limit=0'));
+  });
+
+  // TC-products-api-008: getProduct throws backend error body
+  it('TC-products-api-008 - getProduct throws backend error body', async () => {
+    // Arrange
+    (globalThis as any).fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      text: async () => 'not found',
+    });
+
+    // Act + Assert
+    await expect(getProduct(999)).rejects.toThrow(/not found/);
+  });
 });

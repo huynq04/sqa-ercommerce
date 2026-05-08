@@ -1,85 +1,74 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { UserRecommendationController } from '../controllers/user-recommendation.controller';
-import { RecommendationService } from './recommendation.service';
 
 describe('UserRecommendationController', () => {
   let controller: UserRecommendationController;
+  // Mock service gợi ý sản phẩm để tập trung test parsing/forwarding của controller.
   const mockService: any = { getRecommendations: jest.fn() };
+  const defaultLimit = 8;
 
-  beforeEach(async () => {
+  beforeEach(() => {
     controller = new UserRecommendationController(mockService);
   });
 
   afterEach(() => jest.clearAllMocks());
 
   it('TC-USER-RECOMMENDATION-CONTROLLER-001 - list calls service with parsed limit', async () => {
-    // TC-USER-RECOMMENDATION-CONTROLLER-001: list calls service with parsed limit
-    // Arrange: setup mock data / input
-    // CheckDB: mocked - no DB touch
-    // Act: call function
-    // Assert: verify output and behavior
-    // Rollback: mocked - nothing to rollback
-    // Arrange
-    mockService.getRecommendations.mockResolvedValue([1, 2, 3]);
+    // Arrange: req chứa userId và limit truyền vào ở dạng string từ query params.
     const req: any = { user: { sub: 42 } };
+    mockService.getRecommendations.mockResolvedValue([1, 2]);
+
     // Act
-    const res = await controller.list(req, '2');
-    // Assert
+    const result = await controller.list(req, '2');
+
+    // Assert: limit phải được parse về number trước khi gọi service.
     expect(mockService.getRecommendations).toHaveBeenCalledWith(42, 2);
-    expect(res).toEqual([1, 2, 3]);
+    expect(result).toEqual([1, 2]);
   });
 
-  it('TC-USER-RECOMMENDATION-CONTROLLER-002 - propagates service errors', async () => {
-    // TC-USER-RECOMMENDATION-CONTROLLER-002: should propagate errors from service
-    mockService.getRecommendations.mockRejectedValue(new Error('svc fail'));
-    const req: any = { user: { sub: 42 } };
-    await expect(controller.list(req, '2')).rejects.toThrow('svc fail');
-  });
-
-  // TC-USER-RECOMMENDATION-CONTROLLER-003: uses default limit when query limit missing
-  it('TC-USER-RECOMMENDATION-CONTROLLER-003 - list uses default limit 8 when limit is missing', async () => {
-    // Arrange: mock service return and request user
-    // CheckDB: mocked - no DB touch
-    // Act: call list without limit
-    // Assert: service called with default limit 8
-    // Rollback: mocked - nothing to rollback
+  it('TC-USER-RECOMMENDATION-CONTROLLER-002 - list uses default limit 8 when limit is missing', async () => {
+    // Arrange: không truyền limit.
+    const req: any = { user: { sub: 7 } };
     mockService.getRecommendations.mockResolvedValue([]);
-    const req: any = { user: { sub: 99 } };
 
+    // Act
     await controller.list(req);
 
-    expect(mockService.getRecommendations).toHaveBeenCalledWith(99, 8);
+    // Assert: controller phải fallback về limit mặc định = 8.
+    expect(mockService.getRecommendations).toHaveBeenCalledWith(7, defaultLimit);
   });
 
-  // TC-USER-RECOMMENDATION-CONTROLLER-004: invalid non-numeric limit falls back to 8
-  it('TC-USER-RECOMMENDATION-CONTROLLER-004 - list uses default limit 8 for non-numeric limit', async () => {
-    // Arrange: mock service return
-    // CheckDB: mocked - no DB touch
-    // Act: call list with NaN limit
-    // Assert: fallback limit is 8
-    // Rollback: mocked - nothing to rollback
+  it('TC-USER-RECOMMENDATION-CONTROLLER-003 - list uses default limit 8 for non-positive limit', async () => {
+    // Arrange: các giá trị không hợp lệ (không phải số / <= 0).
+    const req: any = { user: { sub: 9 } };
     mockService.getRecommendations.mockResolvedValue([]);
-    const req: any = { user: { sub: 7 } };
 
+    // Act
     await controller.list(req, 'abc');
+    await controller.list(req, '0');
 
-    expect(mockService.getRecommendations).toHaveBeenCalledWith(7, 8);
+    // Assert: cả 2 lần đều phải dùng default 8 để đảm bảo an toàn.
+    expect(mockService.getRecommendations).toHaveBeenNthCalledWith(1, 9, defaultLimit);
+    expect(mockService.getRecommendations).toHaveBeenNthCalledWith(2, 9, defaultLimit);
   });
 
-  // TC-USER-RECOMMENDATION-CONTROLLER-005: zero/negative limit falls back to 8
-  it('TC-USER-RECOMMENDATION-CONTROLLER-005 - list uses default limit 8 for non-positive limit', async () => {
-    // Arrange: mock service return
-    // CheckDB: mocked - no DB touch
-    // Act: call list with zero and negative limits
-    // Assert: both calls fallback to 8
-    // Rollback: mocked - nothing to rollback
+  it('TC-USER-RECOMMENDATION-CONTROLLER-004 - list uses default limit 8 for empty string', async () => {
+    // Arrange: limit rỗng -> Number('') = 0, phải fallback.
+    const req: any = { user: { sub: 10 } };
     mockService.getRecommendations.mockResolvedValue([]);
-    const req: any = { user: { sub: 15 } };
 
-    await controller.list(req, '0');
-    await controller.list(req, '-5');
+    // Act
+    await controller.list(req, '');
 
-    expect(mockService.getRecommendations).toHaveBeenNthCalledWith(1, 15, 8);
-    expect(mockService.getRecommendations).toHaveBeenNthCalledWith(2, 15, 8);
+    // Assert
+    expect(mockService.getRecommendations).toHaveBeenCalledWith(10, defaultLimit);
+  });
+
+  it('TC-USER-RECOMMENDATION-CONTROLLER-005 - list propagates service errors (fail case)', async () => {
+    // Arrange: service lỗi, controller phải throw lại để global filter xử lý.
+    const req: any = { user: { sub: 12 } };
+    mockService.getRecommendations.mockRejectedValue(new Error('service-failed'));
+
+    // Act + Assert
+    await expect(controller.list(req, '5')).rejects.toThrow('service-failed');
   });
 });

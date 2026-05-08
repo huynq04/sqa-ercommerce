@@ -16,9 +16,10 @@ export class UserCategoryService extends BaseService<Category> {
 
   async findAll(query?: QuerySpecificationDto) {
     // Chỉ cho phép search theo name & description
-    query.searchFields = ['name', 'description'];
+    const safeQuery = query ?? ({} as QuerySpecificationDto);
+    safeQuery.searchFields = ['name', 'description'];
 
-    return this.listPaginate(query, {
+    return this.listPaginate(safeQuery, {
       relations: ['parent', 'children', 'products'],
     });
   }
