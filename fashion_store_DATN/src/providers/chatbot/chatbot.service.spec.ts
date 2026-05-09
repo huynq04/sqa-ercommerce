@@ -2,7 +2,7 @@
 // Tests cover: successful message flow, Gemini API error handling, Redis interaction, RAG context usage
 
 import { ChatbotService } from './chatbot.service';
-import { HttpException } from '@nestjs/common';
+import { BadRequestException, HttpException } from '@nestjs/common';
 
 describe('ChatbotService', () => {
   let service: ChatbotService;
@@ -96,5 +96,25 @@ describe('ChatbotService', () => {
       expect.any(Array),
       60 * 1000,
     );
+  });
+
+  // TC-BE-CHATBOT-SVC-04
+  it('should accept whitespace sessionId due to missing validation', async () => {
+    await expect(service.sendMessage('   ', 'hi')).rejects.toThrow(
+      BadRequestException,
+    );
+    expect(mockRedisService.get).not.toHaveBeenCalled();
+    expect((service as any).axiosInstance.post).not.toHaveBeenCalled();
+    expect(mockRedisService.set).not.toHaveBeenCalled();
+  });
+
+  // TC-BE-CHATBOT-SVC-05
+  it('should proceed even if Redis history is invalid format', async () => {
+    mockRedisService.get.mockResolvedValueOnce('bad' as any);
+    await expect(service.sendMessage('s3', 'hi')).rejects.toThrow(
+      BadRequestException,
+    );
+    expect((service as any).axiosInstance.post).not.toHaveBeenCalled();
+    expect(mockRedisService.set).not.toHaveBeenCalled();
   });
 });

@@ -3,6 +3,7 @@
 // Sử dụng Jest và @nestjs/testing
 
 import { Test, TestingModule } from '@nestjs/testing';
+import { BadRequestException } from '@nestjs/common';
 import { AdminDiscountController } from './admin-discount.controller';
 import { AdminDiscountService } from '../services/admin-discount.service';
 
@@ -82,5 +83,21 @@ describe('AdminDiscountController', () => {
   it('should throw error if service throws', async () => {
     service.findOne.mockRejectedValue(new Error('Service error'));
     await expect(controller.findOne(999)).rejects.toThrow('Service error');
+  });
+
+  // TC-BE-DISCOUNT-CTRL-07: id sai kiểu vẫn được truyền vào service (negative)
+  it('should pass string id to service without validation', async () => {
+    await expect(controller.findOne('abc' as any)).rejects.toThrow(
+      BadRequestException,
+    );
+    expect(service.findOne).not.toHaveBeenCalled();
+  });
+
+  // TC-BE-DISCOUNT-CTRL-08: dto rỗng vẫn được truyền vào service (negative)
+  it('should pass empty dto to service on create', async () => {
+    await expect(controller.create({} as any)).rejects.toThrow(
+      BadRequestException,
+    );
+    expect(service.create).not.toHaveBeenCalled();
   });
 });

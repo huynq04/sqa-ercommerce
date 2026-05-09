@@ -2,6 +2,7 @@
 // Unit tests for AdminReportController
 
 import { Test, TestingModule } from '@nestjs/testing';
+import { BadRequestException } from '@nestjs/common';
 import { AdminReportController } from './admin-report.controller';
 import { AdminReportService } from '../services/admin-report.service';
 
@@ -67,5 +68,22 @@ describe('AdminReportController', () => {
   it('should propagate service error', async () => {
     service.getRevenueOverview.mockRejectedValue(new Error('Service fail'));
     await expect(controller.getOverview({} as any)).rejects.toThrow('Service fail');
+  });
+
+  // TC-BE-REPORT-CTRL-06: filter undefined vẫn truyền vào service (negative)
+  it('should pass undefined filter to getOverview', async () => {
+    await expect(controller.getOverview(undefined as any)).rejects.toThrow(
+      BadRequestException,
+    );
+    expect(service.getRevenueOverview).not.toHaveBeenCalled();
+  });
+
+  // TC-BE-REPORT-CTRL-07: limit sai kiểu vẫn truyền vào service (negative)
+  it('should pass invalid limit type to getBestSellers', async () => {
+    const filter = { limit: 'abc' } as any;
+    await expect(controller.getBestSellers(filter)).rejects.toThrow(
+      BadRequestException,
+    );
+    expect(service.getBestSellerProducts).not.toHaveBeenCalled();
   });
 });

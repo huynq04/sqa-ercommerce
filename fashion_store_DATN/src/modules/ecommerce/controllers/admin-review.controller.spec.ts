@@ -2,6 +2,7 @@
 // Unit tests for AdminReviewController
 
 import { Test, TestingModule } from '@nestjs/testing';
+import { BadRequestException } from '@nestjs/common';
 import { AdminReviewController } from './admin-review.controller';
 import { AdminReviewService } from '@modules/ecommerce/services/admin-review.service';
 import { QuerySpecificationDto } from '@base/dtos/query-specification.dto';
@@ -59,5 +60,21 @@ describe('AdminReviewController', () => {
   it('should propagate service error', async () => {
     service.getById.mockRejectedValue(new Error('Service error'));
     await expect(controller.getById(999)).rejects.toThrow('Service error');
+  });
+
+  // TC-BE-REVIEW-CTRL-05: dto rỗng vẫn được truyền vào service (negative)
+  it('should pass empty dto to reply', async () => {
+    await expect(controller.reply(6, {} as any)).rejects.toThrow(
+      BadRequestException,
+    );
+    expect(service.reply).not.toHaveBeenCalled();
+  });
+
+  // TC-BE-REVIEW-CTRL-06: query undefined vẫn được truyền vào service (negative)
+  it('should pass undefined query to list', async () => {
+    await expect(controller.list(undefined as any)).rejects.toThrow(
+      BadRequestException,
+    );
+    expect(service.listAll).not.toHaveBeenCalled();
   });
 });

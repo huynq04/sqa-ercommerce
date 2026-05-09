@@ -3,6 +3,7 @@
 // Sử dụng Jest và @nestjs/testing
 
 // Giả định: Chỉ test các endpoint RETURN, không test WARRANTY do code bị comment.
+import { BadRequestException } from '@nestjs/common';
 
 const mockService = {
   getReturnById: jest.fn(),
@@ -80,5 +81,21 @@ describe('AdminReturnWarrantyController', () => {
   it('should throw error if service throws', async () => {
     service.getReturnById.mockRejectedValue(new Error('Service error'));
     await expect(controller.getReturnById(999)).rejects.toThrow('Service error');
+  });
+
+  // TC-BE-RETURN-CTRL-07: rejectReturn với dto rỗng vẫn truyền vào service (negative)
+  it('should pass empty dto to rejectReturn', async () => {
+    await expect(controller.rejectReturn(7, {} as any)).rejects.toThrow(
+      BadRequestException,
+    );
+    expect(service.rejectReturn).not.toHaveBeenCalled();
+  });
+
+  // TC-BE-RETURN-CTRL-08: id undefined vẫn được truyền vào service (negative)
+  it('should pass undefined id to approveReturn', async () => {
+    await expect(controller.approveReturn(undefined as any)).rejects.toThrow(
+      BadRequestException,
+    );
+    expect(service.approveReturn).not.toHaveBeenCalled();
   });
 });

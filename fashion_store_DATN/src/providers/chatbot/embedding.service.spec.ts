@@ -1,7 +1,7 @@
 // TC-BE-EMBEDDING: Unit tests for EmbeddingService
 
 import { EmbeddingService } from './embedding.service';
-import { HttpException } from '@nestjs/common';
+import { BadRequestException, HttpException } from '@nestjs/common';
 
 describe('EmbeddingService', () => {
   let service: EmbeddingService;
@@ -60,6 +60,24 @@ describe('EmbeddingService', () => {
 
     // Restore setTimeout
     (global as any).setTimeout = realSetTimeout;
+    genSpy.mockRestore();
+  });
+
+  // TC-BE-EMBEDDING-06
+  it('should normalize whitespace text to empty string', async () => {
+    await expect(service.generateEmbedding('   ')).rejects.toThrow(
+      BadRequestException,
+    );
+    expect((service as any).axiosInstance.post).not.toHaveBeenCalled();
+  });
+
+  // TC-BE-EMBEDDING-07
+  it('should handle empty strings in generateEmbeddings', async () => {
+    const genSpy = jest.spyOn(service as any, 'generateEmbedding');
+    await expect(service.generateEmbeddings(['', 'x'])).rejects.toThrow(
+      BadRequestException,
+    );
+    expect(genSpy).not.toHaveBeenCalled();
     genSpy.mockRestore();
   });
 });
