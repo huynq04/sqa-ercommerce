@@ -4,6 +4,7 @@
 
 // Giả định: File này chỉ test các hàm RETURN, không test WARRANTY do code bị comment.
 // Mock repository và enum ReturnStatus.
+import { BadRequestException } from '@nestjs/common';
 
 const mockReturnRepo = () => ({
   findOne: jest.fn(),
@@ -108,5 +109,23 @@ describe('AdminReturnWarrantyService', () => {
     const result = await service.listAllReturns();
     expect(returnRepo.find).toHaveBeenCalledWith({ relations: ['orderItem', 'order', 'user', 'variant'] });
     expect(result).toBe(returns);
+  });
+
+  // TC-BE-RETURN-07: receiveReturn khi rr undefined gây lỗi do thiếu check (negative)
+  it('should throw when receiveReturn gets undefined return request', async () => {
+    await expect(service.receiveReturn(99)).rejects.toThrow(
+      BadRequestException,
+    );
+    expect(returnRepo.findOne).not.toHaveBeenCalled();
+    expect(returnRepo.save).not.toHaveBeenCalled();
+  });
+
+  // TC-BE-RETURN-08: rejectReturn với reason rỗng vẫn save (negative)
+  it('should accept empty reject reason due to missing validation', async () => {
+    await expect(service.rejectReturn(6, { reason: '' })).rejects.toThrow(
+      BadRequestException,
+    );
+    expect(returnRepo.findOne).not.toHaveBeenCalled();
+    expect(returnRepo.save).not.toHaveBeenCalled();
   });
 });

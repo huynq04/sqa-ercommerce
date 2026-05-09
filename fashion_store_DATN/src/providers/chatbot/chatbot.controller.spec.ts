@@ -1,6 +1,7 @@
 // TC-BE-CHATBOT-CTRL: Unit tests for ChatbotController
 
 import { Test, TestingModule } from '@nestjs/testing';
+import { BadRequestException } from '@nestjs/common';
 import { ChatbotController } from './chatbot.controller';
 import { ChatbotService } from './chatbot.service';
 
@@ -46,5 +47,15 @@ describe('ChatbotController', () => {
     const dto = { message: 'x', guestId: 'g' } as any;
     const req = {} as any;
     await expect(controller.sendMessage(dto, req)).rejects.toThrow('Service fail');
+  });
+
+  // TC-BE-CHATBOT-CTRL-04
+  it('should build guest session when guestId missing (negative)', async () => {
+    const dto = { message: 'hi' } as any;
+    const req = {} as any;
+    await expect(controller.sendMessage(dto, req)).rejects.toThrow(
+      BadRequestException,
+    );
+    expect(mockService.sendMessage).not.toHaveBeenCalled();
   });
 });

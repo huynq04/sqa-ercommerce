@@ -3,6 +3,7 @@
 // Sử dụng Jest và @nestjs/testing
 
 import { Test, TestingModule } from '@nestjs/testing';
+import { BadRequestException } from '@nestjs/common';
 import { AdminOrderService } from './admin-order.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Order } from '@modules/ecommerce/entities/order.entity';
@@ -52,5 +53,21 @@ describe('AdminOrderService', () => {
     const query: QuerySpecificationDto = { page: 1, limit: 10 } as any;
     (service.listPaginate as jest.Mock).mockRejectedValue(new Error('DB error'));
     await expect(service.listAll(query)).rejects.toThrow('DB error');
+  });
+
+  // TC-BE-ORDER-04: Query null gây lỗi do thiếu validate (negative)
+  it('should throw when query is null', async () => {
+    await expect(service.listAll(null as any)).rejects.toThrow(
+      BadRequestException,
+    );
+    expect(service.listPaginate).not.toHaveBeenCalled();
+  });
+
+  // TC-BE-ORDER-05: Query undefined gây lỗi do thiếu validate (negative)
+  it('should throw when query is undefined', async () => {
+    await expect(service.listAll(undefined as any)).rejects.toThrow(
+      BadRequestException,
+    );
+    expect(service.listPaginate).not.toHaveBeenCalled();
   });
 });

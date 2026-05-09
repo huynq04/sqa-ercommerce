@@ -48,4 +48,19 @@ describe('ChatbotRagService', () => {
     const res = await service.getRelevantContext('x');
     expect(res).toBe('Không thể tìm kiếm dữ liệu lúc này.');
   });
+
+  // TC-BE-RAG-04
+  it('should return fallback when policy content is null (negative)', async () => {
+    const results = [
+      {
+        policy: { title: 'Return', content: null },
+        similarity: 0.8,
+        content: 'policy content',
+      },
+    ];
+    mockVectorSearch.search.mockResolvedValueOnce(results as any);
+
+    const res = await service.getRelevantContext('policy');
+    expect(res).toBe('Không thể tìm kiếm dữ liệu lúc này.');
+  });
 });

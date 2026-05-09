@@ -1,6 +1,7 @@
 // TC-BE-VECTOR-SEARCH: Unit tests for VectorSearchService
 
 import { VectorSearchService } from './vector-search.service';
+import { BadRequestException } from '@nestjs/common';
 
 // Minimal AiVector-like object for tests
 const makeVector = (overrides: any) => ({
@@ -120,5 +121,23 @@ describe('VectorSearchService', () => {
   it('private cosineSimilarity handles zero norms and returns 0', () => {
     const res = (service as any).cosineSimilarity([0, 0], [0, 0]);
     expect(res).toBe(0);
+  });
+
+  // TC-BE-VECTOR-09
+  it('should return empty when minSimilarity is greater than 1', async () => {
+    await expect(service.search('q', 5, 2)).rejects.toThrow(
+      BadRequestException,
+    );
+    expect(mockEmbedding.generateEmbedding).not.toHaveBeenCalled();
+    expect(mockVectorRepo.find).not.toHaveBeenCalled();
+  });
+
+  // TC-BE-VECTOR-10
+  it('should process empty query due to missing validation', async () => {
+    await expect(service.search('', 5, 0.5)).rejects.toThrow(
+      BadRequestException,
+    );
+    expect(mockEmbedding.generateEmbedding).not.toHaveBeenCalled();
+    expect(mockVectorRepo.find).not.toHaveBeenCalled();
   });
 });

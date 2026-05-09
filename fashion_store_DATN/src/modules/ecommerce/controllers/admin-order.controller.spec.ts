@@ -3,6 +3,7 @@
 // Sử dụng Jest và @nestjs/testing
 
 import { Test, TestingModule } from '@nestjs/testing';
+import { BadRequestException } from '@nestjs/common';
 import { AdminOrderController } from './admin-order.controller';
 import { AdminOrderService } from '../services/admin-order.service';
 import { QuerySpecificationDto } from '@base/dtos/query-specification.dto';
@@ -44,5 +45,12 @@ describe('AdminOrderController', () => {
     const query: QuerySpecificationDto = { page: 1, limit: 10 } as any;
     service.listAll.mockRejectedValue(new Error('Service error'));
     await expect(controller.list(query)).rejects.toThrow('Service error');
+  });
+
+  // TC-BE-ORDER-CTRL-03: Query sai kiểu vẫn truyền vào service (negative)
+  it('should pass invalid query values to service without validation', async () => {
+    const query = { page: 'abc', limit: 'x' } as any;
+    await expect(controller.list(query)).rejects.toThrow(BadRequestException);
+    expect(service.listAll).not.toHaveBeenCalled();
   });
 });

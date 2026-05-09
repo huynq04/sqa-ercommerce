@@ -2,7 +2,7 @@
 // Unit tests for AdminReviewService
 // TC comments use format: // TC-BE-...
 
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { AdminReviewService } from './admin-review.service';
 import { QuerySpecificationDto } from '@base/dtos/query-specification.dto';
 
@@ -81,5 +81,22 @@ describe('AdminReviewService', () => {
   it('should throw NotFoundException when getById not found', async () => {
     reviewRepo.findOne.mockResolvedValue(undefined);
     await expect(service.getById(3)).rejects.toThrow(NotFoundException);
+  });
+
+  // TC-BE-REVIEW-07: query null gây lỗi do thiếu validate (negative)
+  it('should throw when query is null', async () => {
+    await expect(service.listAll(null as any)).rejects.toThrow(
+      BadRequestException,
+    );
+    expect(service.listPaginate).not.toHaveBeenCalled();
+  });
+
+  // TC-BE-REVIEW-08: reply với chuỗi whitespace vẫn được lưu (negative)
+  it('should accept whitespace reply due to missing validation', async () => {
+    await expect(service.reply(5, { reply: '   ' } as any)).rejects.toThrow(
+      BadRequestException,
+    );
+    expect(reviewRepo.findOne).not.toHaveBeenCalled();
+    expect(reviewRepo.save).not.toHaveBeenCalled();
   });
 });

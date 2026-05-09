@@ -2,6 +2,7 @@
 // Unit tests for AdminReportService
 
 import { AdminReportService } from './admin-report.service';
+import { BadRequestException } from '@nestjs/common';
 
 // Helper to create a chainable mock QueryBuilder
 function createMockQB({ rawOneValue = undefined, rawManyValue = undefined } = {}) {
@@ -135,5 +136,22 @@ describe('AdminReportService', () => {
     const res = await service.getProductSales({} as any);
     expect(productRepo.createQueryBuilder).toHaveBeenCalledWith('product');
     expect(res[0]).toEqual({ productId: 2, name: 'Prod', imageUrl: 'img', totalSold: 7, revenue: 700 });
+  });
+
+  // TC-BE-REPORT-07: filter null gây lỗi do thiếu validate (negative)
+  it('should throw when filter is null in getRevenueOverview', async () => {
+    await expect(service.getRevenueOverview(null as any)).rejects.toThrow(
+      BadRequestException,
+    );
+    expect(orderRepo.createQueryBuilder).not.toHaveBeenCalled();
+    expect(orderItemRepo.createQueryBuilder).not.toHaveBeenCalled();
+  });
+
+  // TC-BE-REPORT-08: limit <= 0 sẽ dùng default 10 (edge)
+  it('should use default limit when limit is 0', async () => {
+    const qb = createMockQB({ rawManyValue: [] });
+    orderItemRepo.createQueryBuilder.mockReturnValue(qb);
+    await service.getBestSellerProducts({ limit: 0 } as any);
+    expect(qb.limit).toHaveBeenCalledWith(10);
   });
 });

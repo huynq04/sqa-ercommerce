@@ -3,7 +3,7 @@
 // Sử dụng Jest và @nestjs/testing
 
 import { AdminDiscountService } from './admin-discount.service';
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 
 const mockDiscountRepo = () => ({
   find: jest.fn(),
@@ -98,5 +98,27 @@ describe('AdminDiscountService', () => {
   it('should throw NotFoundException if remove target not found', async () => {
     discountRepo.findOne.mockResolvedValue(undefined);
     await expect(service.remove(1)).rejects.toThrow(NotFoundException);
+  });
+
+  // TC-BE-DISCOUNT-10: Cho phép code whitespace do thiếu validate (negative)
+  it('should still create discount when code is whitespace', async () => {
+    const dto = { code: '   ' };
+    await expect(service.create(dto as any)).rejects.toThrow(
+      BadRequestException,
+    );
+    expect(discountRepo.findOne).not.toHaveBeenCalled();
+    expect(discountRepo.create).not.toHaveBeenCalled();
+    expect(discountRepo.save).not.toHaveBeenCalled();
+  });
+
+  // TC-BE-DISCOUNT-11: Update giá trị âm vẫn được save do thiếu validate (negative)
+  it('should update discount with negative value without validation', async () => {
+    const id = 2;
+    const dto = { value: -10 };
+    await expect(service.update(id, dto as any)).rejects.toThrow(
+      BadRequestException,
+    );
+    expect(discountRepo.findOne).not.toHaveBeenCalled();
+    expect(discountRepo.save).not.toHaveBeenCalled();
   });
 });
