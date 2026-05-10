@@ -159,7 +159,34 @@ describe('UserReviewService', () => {
     expect(result).toEqual({ items: [], total: 0 });
   });
 
-  it('TC-USER-REVIEW-SERVICE-008 - returns cannot comment when review exists', async () => {
+  it('TC-USER-REVIEW-SERVICE-008 - ném lỗi khi query bị undefined', async () => {
+    // Mock listPaginate (dù thực tế sẽ không chạy tới đây)
+    const spy = jest.spyOn(service as any, 'listPaginate');
+
+    // Kiểm tra hàm ném lỗi vì không thể gán searchFields vào undefined
+    await expect(
+      service.listProductReviews(10, undefined as any),
+    ).rejects.toThrow();
+
+    // Đảm bảo không gọi xuống tầng database/pagination
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('TC-USER-REVIEW-SERVICE-009 - ném lỗi khi productId bị undefined', async () => {
+    const spy = jest.spyOn(service as any, 'listPaginate');
+    const query = { searchFields: [] } as any;
+
+    // Kiểm tra hàm ném lỗi khi productId không hợp lệ
+    // Lưu ý: Nếu bạn dùng Error custom, hãy truyền string lỗi vào .toThrow('...')
+    await expect(
+      service.listProductReviews(undefined as any, query),
+    ).rejects.toThrow();
+
+    // Quan trọng: Xác nhận logic đã bị chặn lại ngay từ đầu
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('TC-USER-REVIEW-SERVICE-010 - returns cannot comment when review exists', async () => {
     orderItemRepo.findOne.mockResolvedValue({
       id: 1,
       order: {
@@ -180,7 +207,7 @@ describe('UserReviewService', () => {
     );
   });
 
-  it('TC-USER-REVIEW-SERVICE-009 - returns cannot comment when not delivered', async () => {
+  it('TC-USER-REVIEW-SERVICE-011 - returns cannot comment when not delivered', async () => {
     orderItemRepo.findOne.mockResolvedValue({
       id: 1,
       order: {
@@ -199,7 +226,7 @@ describe('UserReviewService', () => {
     });
   });
 
-  it('TC-USER-REVIEW-SERVICE-010 - returns canComment true when delivered and no review', async () => {
+  it('TC-USER-REVIEW-SERVICE-012 - returns canComment true when delivered and no review', async () => {
     orderItemRepo.findOne.mockResolvedValue({
       id: 1,
       order: {
@@ -215,7 +242,7 @@ describe('UserReviewService', () => {
     expect(result).toEqual({ canComment: true });
   });
 
-  it('TC-USER-REVIEW-SERVICE-011 - throws NotFoundException when order item missing', async () => {
+  it('TC-USER-REVIEW-SERVICE-013 - throws NotFoundException when order item missing', async () => {
     orderItemRepo.findOne.mockResolvedValue(undefined);
 
     await expect(service.checkCommentable(1, 1)).rejects.toBeInstanceOf(
@@ -223,7 +250,7 @@ describe('UserReviewService', () => {
     );
   });
 
-  it('TC-USER-REVIEW-SERVICE-012 - throws NotFoundException when user mismatch', async () => {
+  it('TC-USER-REVIEW-SERVICE-014 - throws NotFoundException when user mismatch', async () => {
     orderItemRepo.findOne.mockResolvedValue({
       id: 1,
       order: {
