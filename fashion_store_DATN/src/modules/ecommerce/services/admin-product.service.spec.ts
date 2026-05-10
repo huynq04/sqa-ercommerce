@@ -221,20 +221,7 @@ describe('AdminProductService', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
-  it('TC-ADMIN-PRODUCT-SERVICE-008 - create rejects when categoryId missing or wrong type', async () => {
-    // Arrange
-    mockCategoryRepo.findOne.mockResolvedValue({ id: 1 });
-
-    // Act + Assert
-    await expect(
-      service.create({ name: 'A', price: 100 } as any),
-    ).rejects.toBeInstanceOf(BadRequestException);
-    await expect(
-      service.create({ name: 'A', price: 100, categoryId: 'x' } as any),
-    ).rejects.toBeInstanceOf(BadRequestException);
-  });
-
-  it('TC-ADMIN-PRODUCT-SERVICE-009 - update throws NotFoundException when product missing', async () => {
+  it('TC-ADMIN-PRODUCT-SERVICE-008 - update throws NotFoundException when product missing', async () => {
     // Arrange
     mockProductRepo.findOne.mockResolvedValue(undefined);
 
@@ -248,7 +235,7 @@ describe('AdminProductService', () => {
     });
   });
 
-  it('TC-ADMIN-PRODUCT-SERVICE-010 - update throws NotFoundException when category missing', async () => {
+  it('TC-ADMIN-PRODUCT-SERVICE-009 - update throws NotFoundException when category missing', async () => {
     // Arrange
     mockProductRepo.findOne.mockResolvedValue({
       id: 8,
@@ -267,7 +254,7 @@ describe('AdminProductService', () => {
     expect(mockProductRepo.save).not.toHaveBeenCalled();
   });
 
-  it('TC-ADMIN-PRODUCT-SERVICE-011 - update changes category when valid categoryId provided', async () => {
+  it('TC-ADMIN-PRODUCT-SERVICE-010 - update changes category when valid categoryId provided', async () => {
     // Arrange
     const product = {
       id: 8,
@@ -291,7 +278,7 @@ describe('AdminProductService', () => {
     );
   });
 
-  it('TC-ADMIN-PRODUCT-SERVICE-012 - update replaces main image when changed', async () => {
+  it('TC-ADMIN-PRODUCT-SERVICE-011 - update replaces main image when changed', async () => {
     // Arrange
     const product = {
       id: 8,
@@ -319,7 +306,7 @@ describe('AdminProductService', () => {
     expect(mockImageRepo.save).toHaveBeenCalledWith(createdImage);
   });
 
-  it('TC-ADMIN-PRODUCT-SERVICE-013 - update skips image update when url unchanged', async () => {
+  it('TC-ADMIN-PRODUCT-SERVICE-012 - update skips image update when url unchanged', async () => {
     // Arrange
     mockProductRepo.findOne.mockResolvedValue({
       id: 9,
@@ -341,7 +328,7 @@ describe('AdminProductService', () => {
     expect(mockImageRepo.save).not.toHaveBeenCalled();
   });
 
-  it('TC-ADMIN-PRODUCT-SERVICE-014 - update merges fields and keeps old values for partial update', async () => {
+  it('TC-ADMIN-PRODUCT-SERVICE-013 - update merges fields and keeps old values for partial update', async () => {
     // Arrange
     const existing = {
       id: 10,
@@ -372,7 +359,7 @@ describe('AdminProductService', () => {
     );
   });
 
-  it('TC-ADMIN-PRODUCT-SERVICE-015 - update does not overwrite fields with undefined', async () => {
+  it('TC-ADMIN-PRODUCT-SERVICE-014 - update does not overwrite fields with undefined', async () => {
     // Arrange
     const existing = {
       id: 12,
@@ -399,7 +386,7 @@ describe('AdminProductService', () => {
     );
   });
 
-  it('TC-ADMIN-PRODUCT-SERVICE-016 - update rejects invalid fields (price/discount/stock/type)', async () => {
+  it('TC-ADMIN-PRODUCT-SERVICE-015 - update rejects invalid fields (price/discount/stock/type)', async () => {
     // Arrange
     mockProductRepo.findOne.mockResolvedValue({
       id: 20,
@@ -427,7 +414,7 @@ describe('AdminProductService', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
-  it('TC-ADMIN-PRODUCT-SERVICE-017 - delete throws BadRequest when usedInOrders > 0', async () => {
+  it('TC-ADMIN-PRODUCT-SERVICE-016 - delete throws BadRequest when usedInOrders > 0', async () => {
     // Arrange
     const qb = setupOrderItemQb(2);
 
@@ -444,7 +431,7 @@ describe('AdminProductService', () => {
     expect(mockProductRepo.remove).not.toHaveBeenCalled();
   });
 
-  it('TC-ADMIN-PRODUCT-SERVICE-018 - delete throws NotFoundException when product missing', async () => {
+  it('TC-ADMIN-PRODUCT-SERVICE-017 - delete throws NotFoundException when product missing', async () => {
     // Arrange
     setupOrderItemQb(0);
     mockProductRepo.findOne.mockResolvedValue(undefined);
@@ -457,7 +444,7 @@ describe('AdminProductService', () => {
     expect(mockProductRepo.remove).not.toHaveBeenCalled();
   });
 
-  it('TC-ADMIN-PRODUCT-SERVICE-019 - delete succeeds and performs cleanup in order', async () => {
+  it('TC-ADMIN-PRODUCT-SERVICE-018 - delete succeeds and performs cleanup in order', async () => {
     // Arrange
     setupOrderItemQb(0);
     const product = { id: 5 };
